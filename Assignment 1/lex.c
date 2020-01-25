@@ -19,7 +19,7 @@ int lex(void){
    while(1){       /* Get the next one         */
       while(!*current ){
          /* Get new lines, skipping any leading
-         * white space on the line,
+         * white space on theI line,
          * until a nonblank line is found.
          */
 
@@ -43,7 +43,7 @@ int lex(void){
            case '+':
             return PLUS;
            case '-':
-            return MINUS;
+            return SUB;
            case '*':
             return TIMES;
            case '/':
@@ -52,18 +52,67 @@ int lex(void){
             return LP;
            case ')':
             return RP;
+           case '<':
+            return LT;
+           case '>':
+            return GT;
+           case '=':
+            return EQ;
+           // case ':':
+           //  return AS;
            case '\n':
            case '\t':
            case ' ' :
             break;
            default:
-            if(!isalnum(*current))
+
+            if (*current == ':' && *(current+1) == '='){
+                current++;
+                return AS;
+            }
+            else if(!isalnum(*current))
                fprintf(stderr, "Not alphanumeric <%c>\n", *current);
+
             else{
-               while(isalnum(*current))
-                  ++current;
-               yyleng = current - yytext;
-               return NUM_OR_ID;
+              if(isdigit(*current)){
+                while(isdigit(*current))
+                   ++current;
+                yyleng = current - yytext;
+                return NUM;
+              }
+              else{
+
+                 while(isalnum(*current))
+                    ++current;
+                 yyleng = current - yytext;
+
+                   if( yyleng==2 && *(current-2) == 'i' && *(current-1) =='f'  )
+                   {
+                     return IF;
+                   }
+
+                  if( yyleng==4 && *(current-4) == 't' && *(current-3) =='h' && *(current-2) == 'e' && *(current-1) == 'n'  )
+                  {
+                    return THEN;
+                  }
+                  if( yyleng==5 && *(current-5) == 'w' && *(current-4) =='h' && *(current-3) == 'i' && *(current-2) == 'l' && *(current-1) == 'e'  )
+                  {
+                   return WHILE;
+                  }
+                  if( yyleng==2 && *(current-2) == 'd' && *(current-1) =='o'  )
+                  {
+                    return DO;
+                  }
+                  if( yyleng==5 && *(current-5) == 'b' && *(current-4) =='e' && *(current-3) == 'g' && *(current-2) == 'i' && *(current-1) == 'n'  )
+                  {
+                   return BEGIN;
+                  }
+                  if( yyleng==3 && *(current-3) == 'e' && *(current-2) =='n' && *(current-1) =='d'  )
+                  {
+                    return END;
+                  }
+                 return ID;
+              }
             }
             break;
          }
@@ -89,4 +138,17 @@ void advance(void){
    input symbol.                               */
 
     Lookahead = lex();
+}
+
+int main()
+{
+  while(1)
+  {
+    advance();
+    if(Lookahead == 0)
+    {
+      return 0;
+    }
+    printf("%d\n", Lookahead);
+  }
 }
