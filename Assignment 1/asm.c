@@ -1,12 +1,29 @@
 #include <stdio.h>
 #include <string.h>
 
+struct map{
+  char elem[1024];
+};
+
+map var[1000];
+int idx;
 char token[1024];
 FILE* fp;
 FILE* outfp;
 int tempfp = 0;
 int fileEnd = 1;
 int compop = 0;
+int lcount = 0, st[1000] = {}, stcount = 0;
+char* res[10000];
+
+int comp(char* tok, int lblval);
+int readstatements(int lblval, int wval);
+int readstatement(int lblval);
+int printops(char* tok, int lblval);
+int comp(char* tok, int lblval);
+int loadval(char* tok) { fprintf(outfp, "MOV BX, %sD\n", tok); }
+int loadvar(char* tok) { fprintf(outfp, "MOV BX, %s\n", tok); }
+int loadacc(char* tok) { fprintf(outfp, "MOV AX, %s\n", tok); }
 
 void gettoken() {
     if (fscanf(fp, "%s", token) == EOF) {
@@ -14,24 +31,16 @@ void gettoken() {
     };
 }
 
-// char* tocken;
-int lcount = 0, st[1000] = {}, stcount = 0;
-char* res[10000];
-
-// strcpy(res, "");
-int comp(char* tok, int lblval);
-int readstatements(int lblval, int wval);
-int readstatement(int lblval);
-
-int loadval(char* tok) { fprintf(outfp, "MOV B %sd\n", tok); }
-int loadvar(char* tok) { fprintf(outfp, "LDA %s\nMOV B A\n", tok); }
-int loadacc(char* tok) { fprintf(outfp, "LDA %s\n", tok); }
-
-int printops(char* tok, int lblval);
-int comp(char* tok, int lblval);
+int findVar(char *tok) {
+    for(int i=0;i<1000 && var[i].elem[0]!='\0';i++){
+        if(strcmp(var[i].elem,tok) == 0) {
+            return 1;
+        }
+    }
+    return 0;
+}
 
 int asmgen() {
-    // get token
     tempfp = ftell(fp);
     gettoken();
     for (; fileEnd; gettoken()) {
@@ -42,9 +51,7 @@ int asmgen() {
         } else if (strcmp(token, "if") == 0) {
             gettoken();
             tempfp = ftell(fp);
-
             readstatements(++lcount, 0);
-
         } else if (strcmp(token, "while") == 0) {
             gettoken();
             tempfp = ftell(fp);
@@ -53,19 +60,11 @@ int asmgen() {
             readstatements(++lcount, wval);
         } else {
             fseek(fp, tempfp, SEEK_SET);
-
             readstatement(0);
         }
         tempfp = ftell(fp);
     }
 }
-
-// int readcond() {
-//     while (*(tocken = gettoken()) != '(')
-//         ;
-//     // read statements
-//     readstatements();
-// }
 
 int readstatements(int lblval, int wval) {
     gettoken();
@@ -78,7 +77,7 @@ int readstatements(int lblval, int wval) {
         gettoken();
     }
     if (compop == 0) {
-        fprintf(outfp, "CMP A 0D\nJZ L%d\n", lblval);
+        fprintf(outfp, "CMP AX, 00D\nJZ L%d\n", lblval);
     } else {
         compop = 0;
     }
@@ -95,10 +94,8 @@ int readstatement(int lblval) {
     char tok[3][1024];
     gettoken();
     strcpy(tok[0], token);
-
     gettoken();
     strcpy(tok[1], token);
-
     gettoken();
     strcpy(tok[2], token);
     if (tok[2][0] >= '0' && tok[2][0] <= '9') {
@@ -108,30 +105,36 @@ int readstatement(int lblval) {
         loadvar(tok[2]);
         loadacc(tok[0]);
     }
-
     printops(tok[1], lblval);
-    fprintf(outfp, "STA %s\n", tok[0]);
+    fprintf(outfp, "MOV %s,AX\n", tok[0]);
+
+    if(!findVar(tok[0])){
+        strcpy(var[idx++].elem,tok[0]);
+    }
+    if(!findVar(tok[2])){
+        strcpy(var[idx++].elem,tok[2]);
+    }
 }
 
 int printops(char* tok, int lblval) {
     if (strcmp(tok, "+=") == 0) {
-        fprintf(outfp, "ADD B\n");
+        fprintf(outfp, "ADD AX, BX\n");
     } else if (strcmp(tok, "-=") == 0) {
-        fprintf(outfp, "SUB B\n");
+        fprintf(outfp, "SUB AX, BX\n");
     } else if (strcmp(tok, "/=") == 0) {
-        fprintf(outfp, "MUL B\n");
+        fprintf(outfp, "MUL BX\n");
     } else if (strcmp(tok, "*=") == 0) {
-        fprintf(outfp, "DIV B\n");
+        fprintf(outfp, "DIV BX\n");
     } else if (strcmp(tok, "=") == 0) {
-        fprintf(outfp, "MOV A B\n");
-    } else
+        fprintf(outfp, "MOV AX, BX\n");
+    } else {
         comp(tok, lblval);
+    }
 }
 
 int comp(char* tok, int lblval) {
     compop = 1;
     fprintf(outfp, "CMP A B\n");
-
     if (strcmp(tok, ">") == 0) {
         fprintf(outfp, "JLE L%d\n", lblval);
     } else if (strcmp(tok, "<") == 0) {
@@ -142,10 +145,12 @@ int comp(char* tok, int lblval) {
 }
 
 int main() {
+    idx = 0;
+    var[0].elem[0] = '\0';
     fp = fopen("sample.txt", "r");
     outfp = fopen("outfile.asm", "w");
     if (fp == NULL) {
-        printf("EMPTY FILE\n");
+        printf("NO FILE EXISTS FILE\n");
         return 0;
     }
     printf("Calling asnge\n");
