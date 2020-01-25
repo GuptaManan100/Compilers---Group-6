@@ -140,15 +140,15 @@ void advance(void){
     Lookahead = lex();
 }
 
-int main()
-{
-  while(1)
-  {
-    advance();
-    if(Lookahead == 0)
-    {
-      return 0;
-    }
-    printf("%d\n", Lookahead);
-  }
-}
+// int main()
+// {
+//   while(1)
+//   {
+//     advance();
+//     if(Lookahead == 0)
+//     {
+//       return 0;
+//     }
+//     printf("%d\n", Lookahead);
+//   }
+// }

@@ -1,3 +1,5 @@
+#ifndef LEX 
+#define LEX
 #define EOI		0	/* End of input			*/
 #define SEMI	1	/* ; 				*/
 #define PLUS 	2	/* + 				*/
@@ -22,3 +24,12 @@
 extern char *yytext;		/* in lex.c			*/
 extern int yyleng;
 extern int yylineno;
+
+void advance();
+int match (int token);
+
+
+
+
+
+#endif
