@@ -237,9 +237,16 @@ char *d()
         return "ERROR";
 	}
 	
-    if( match(NUM) || match(ID) ){
+    if( match(NUM) ){
         tempvar = newname();
         printf("%s = %0.*s\n", tempvar ,yyleng,yytext);
+        advance();
+        return tempvar;
+    }
+
+    else if(match(ID) ){
+        tempvar = newname();
+        printf("%s = _%0.*s\n", tempvar ,yyleng,yytext);
         advance();
         return tempvar;
     }
