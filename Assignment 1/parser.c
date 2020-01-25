@@ -30,13 +30,14 @@ void statements()
 
 void stmt()
 {
-    if(!legal_lookahead( ID , NUM , IF , WHILE , BEGIN , LP ,0))
+    if(!legal_lookahead( ID , IF , WHILE , BEGIN ,0))
         return;
     if( match(ID) )
     {
         d();
         if( match(AS) )
         {
+        	advance();
             expr();
         }
 
@@ -49,12 +50,13 @@ void stmt()
         
         if( match(THEN) ) 
         {
+        	advance();
             stmt();
         }
 
         else
         {
-            printf("Every If must have a corresponding Then\n");
+            fprintf(stderr,"%d: Every If must have a corresponding Then\n",yylineno);
         }
     }
 
@@ -65,12 +67,13 @@ void stmt()
         
         if( match(DO) ) 
         {
+        	advance();
             stmt();
         }
 
         else
         {
-            printf("Every WHILE must have a corresponding DO\n");
+            fprintf(stderr, "%d: Every WHILE must have a corresponding DO\n",yylineno);
         }
     }
 
@@ -81,12 +84,13 @@ void stmt()
         
         if( match(END) ) 
         {
+        	advance();
             statements();
         }
 
         else
         {
-            printf("Every BEGIN must have a corresponding END\n");
+            fprintf(stderr, "%d: Every BEGIN must have a corresponding END\n",yylineno);
         }
     }
 
@@ -103,8 +107,10 @@ void S()
      */
 
     if( !legal_lookahead( NUM, ID, LP, 0 ) )
-    return;
-
+    {
+    	fprintf(stderr, "%d: Missing operator\n",yylineno);
+    	return;
+	}
     d();
     while( match( PLUS ) || match (SUB) )
     {
@@ -121,7 +127,10 @@ void expr()
      */
 
     if( !legal_lookahead( NUM, ID, LP, 0 ) )
-    return;
+    {
+    	fprintf(stderr, "%d: Missing operator\n",yylineno);
+    	return;
+    }
 
     S();
     while( match( TIMES ) || match (DIV) )
@@ -138,8 +147,10 @@ void E()
      */
 
     if( !legal_lookahead( NUM, ID, LP, 0 ) )
-    return;
-
+    {
+    	fprintf(stderr, "%d: Missing expression\n",yylineno);
+    	return;
+	}
     expr();
     if( match( GT ) || match (LT) || match(EQ) )
     {
@@ -151,8 +162,11 @@ void E()
 void d()
 {
     if( !legal_lookahead( NUM, ID ,LP, 0 ) )
+    {
+    	fprintf(stderr, "%d: Missing operand\n",yylineno);
         return;
-
+	}
+	
     if( match(NUM) || match(ID) )
         advance();
 
@@ -166,7 +180,7 @@ void d()
             fprintf( stderr, "%d: Mismatched parenthesis\n", yylineno );
     }
     else
-    fprintf( stderr, "%d: Number or identifier expected\n", yylineno );
+    	fprintf( stderr, "%d: Number or identifier expected\n", yylineno );
 }
 #include <stdarg.h>
 
