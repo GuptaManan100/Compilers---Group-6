@@ -1,20 +1,14 @@
 #include <stdio.h>
 #include <string.h>
 
-struct map{
+struct Map{
   char elem[1024];
 };
 
-map var[1000];
-int idx;
+struct Map var[1000];
 char token[1024];
-FILE* fp;
-FILE* outfp;
-int tempfp = 0;
-int fileEnd = 1;
-int compop = 0;
-int lcount = 0, st[1000] = {}, stcount = 0;
-char* res[10000];
+FILE *fp, *outfp;
+int idx, tempfp = 0, fileEnd = 1, compop = 0, lcount = 0;
 
 int comp(char* tok, int lblval);
 int readstatements(int lblval, int wval);
@@ -66,29 +60,6 @@ int asmgen() {
     }
 }
 
-int readstatements(int lblval, int wval) {
-    gettoken();
-    while (token[0] != ')') {
-        fseek(fp, tempfp, SEEK_SET);
-
-        readstatement(lblval);
-        tempfp = ftell(fp);
-
-        gettoken();
-    }
-    if (compop == 0) {
-        fprintf(outfp, "CMP AX, 00D\nJZ L%d\n", lblval);
-    } else {
-        compop = 0;
-    }
-    gettoken();
-    asmgen();
-    if (wval) {
-        fprintf(outfp, "JMP L%d\n", wval);
-    }
-    fprintf(outfp, "\n\tL%d:\n", lblval);
-    return 0;
-}
 
 int readstatement(int lblval) {
     char tok[3][1024];
@@ -110,9 +81,11 @@ int readstatement(int lblval) {
 
     if(!findVar(tok[0])){
         strcpy(var[idx++].elem,tok[0]);
+        var[idx].elem[0] = '\0';
     }
     if(!findVar(tok[2])){
         strcpy(var[idx++].elem,tok[2]);
+        var[idx].elem[0] = '\0';
     }
 }
 
@@ -134,7 +107,7 @@ int printops(char* tok, int lblval) {
 
 int comp(char* tok, int lblval) {
     compop = 1;
-    fprintf(outfp, "CMP A B\n");
+    fprintf(outfp, "CMP A, B\n");
     if (strcmp(tok, ">") == 0) {
         fprintf(outfp, "JLE L%d\n", lblval);
     } else if (strcmp(tok, "<") == 0) {
@@ -148,13 +121,19 @@ int main() {
     idx = 0;
     var[0].elem[0] = '\0';
     fp = fopen("sample.txt", "r");
-    outfp = fopen("outfile.asm", "w");
+    outfp = fopen("outfile.asm", "w+");
     if (fp == NULL) {
         printf("NO FILE EXISTS FILE\n");
         return 0;
     }
     printf("Calling asnge\n");
     asmgen();
+    fseek(outfp,0,SEEK_SET);
+    fprintf(outfp, "    .8086\n   .Model small\n    .STACK 256\n    .DATA\n");
+    for(int i=0;i<idx;i++){
+      fprintf(outfp,"%s DW\n",var[i].elem);
+    }
+    fprintf(outfp, "    .CODE\nMAIN PROC\nMOV AX,@data\nMOV ds,AX\n\n");
     fclose(fp);
     fclose(outfp);
     return 0;
