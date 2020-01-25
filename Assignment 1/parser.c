@@ -2,145 +2,200 @@
 
 #include <stdio.h>
 #include "lex.h"
+#include "name.h"
 
-void statements();
+void  statements();
 void stmt();
-void d();
-void expr();
-void E();
-void S();
+char * d();
+char * expr();
+char * E();
+char * S();
 int legal_lookahead( int first_arg , ... );
 
 
 void statements()
 {
-    /*  statements -> stmt SEMI statements | epsilon 
-        stmt -> id AS expr | if E then stmt | while E do stmt | begin statements end
+    /*  statements -> statements' | epsilon 
+        statements' -> stmt SEMI statements' | stmt
+        stmt -> id AS expr | if E then stmt | while E do stmt | begin X
+        X -> statements' END | END
     */
+    //char * a = newname();
 
     while( !match(EOI) )
     {
         stmt();
+        //printf("New statement\n");
         if( match( SEMI ) )
             advance();
+        else if(match(EOI))
+            continue;
         else
             fprintf( stderr, "%d: Inserting missing semicolon\n", yylineno );
+        //printf("Manan\n");
     }
 }
 
 void stmt()
 {
+    char *tempvar;
+    char *tempvar2;
+    
     if(!legal_lookahead( ID , IF , WHILE , BEGIN ,0))
         return;
     if( match(ID) )
     {
-        d();
+        tempvar = d();
         if( match(AS) )
         {
         	advance();
-            expr();
+            tempvar2 = expr();
+            printf("%s = %s \n",tempvar,tempvar2 );
+            freename(tempvar);
+            freename(tempvar2);
         }
-
+        else
+        {
+            fprintf(stderr,"%d: Missing assignment operator\n",yylineno);
+            freename(tempvar);
+        }
     }
 
     else if( match(IF) )
     {
+        printf("if (\n");
         advance();
-        E();
-        
+        tempvar = E();
+        freename(tempvar);
+        printf(")\n");
+
         if( match(THEN) ) 
         {
+            printf("{\n");
         	advance();
             stmt();
+            printf("}\n" );
         }
 
         else
         {
             fprintf(stderr,"%d: Every If must have a corresponding Then\n",yylineno);
+            printf("{\n}\n");
         }
     }
 
     else if( match(WHILE) )
     {
+        printf("while ( \n");
         advance();
-        E();
-        
+        tempvar = E();
+        freename(tempvar);
+        printf(")\n" ) ;
         if( match(DO) ) 
         {
+            printf("{\n");
         	advance();
             stmt();
+            printf("}\n");
         }
 
         else
         {
             fprintf(stderr, "%d: Every WHILE must have a corresponding DO\n",yylineno);
+            printf("{\n}\n");
         }
     }
 
     else if( match(BEGIN) )
     {
+        printf("{\n");
+
         advance();
-        E();
-        
-        if( match(END) ) 
+        while( !match(END) && !match(EOI)) 
         {
-        	advance();
-            statements();
+            stmt();
+            //printf("New statement\n");
+            if( match( SEMI ) )
+                advance();
+            else if(match(EOI) || match(END))
+                continue;
+            else
+                fprintf( stderr, "%d: Inserting missing semicolon\n", yylineno );
+            //printf("Manan\n");
         }
 
+        if(match(END))
+        {
+            advance();
+        }
         else
         {
             fprintf(stderr, "%d: Every BEGIN must have a corresponding END\n",yylineno);
         }
+        printf("}\n");
+
     }
 
     else
     {
-        printf("Syntax Error\n");
+        fprintf(stderr,"%d: Syntax Error\n",yylineno);
     }
 }
 
-void S()
+char *S()
 {
     /* S  -> d S'
-     * S' -> PLUS d S' | MINUS d S'  | epsilon
+     * S' -> TIMES d S' | DIV d S'  | epsilon
      */
 
     if( !legal_lookahead( NUM, ID, LP, 0 ) )
     {
     	fprintf(stderr, "%d: Missing operator\n",yylineno);
-    	return;
+        return "ERROR";
+
 	}
-    d();
-    while( match( PLUS ) || match (SUB) )
-    {
-        advance();
-        d();
-    }
-}
+    char *tempvar;
+    tempvar = d();
 
-
-void expr()
-{
-    /* expr  -> S expr'
-     * expr' -> TIMES S expr' | DIV S expr'  | epsilon
-     */
-
-    if( !legal_lookahead( NUM, ID, LP, 0 ) )
-    {
-    	fprintf(stderr, "%d: Missing operator\n",yylineno);
-    	return;
-    }
-
-    S();
     while( match( TIMES ) || match (DIV) )
     {
+        char *tempvar2;
+        char operator = *yytext;
         advance();
-        S();
+        tempvar2 = d();
+        printf("%s %c= %s \n", tempvar , operator , tempvar2 );
+        freename(tempvar2);
     }
+    return tempvar;
 }
 
-void E()
+
+char *expr()
+{
+    /* expr  -> S expr'
+     * expr' -> PLUS S expr' | SUB S expr'  | epsilon
+     */
+
+    char *tempvar;
+    if( !legal_lookahead( NUM, ID, LP, 0 ) )
+    {
+    	fprintf(stderr, "%d: Missing operator\n",yylineno);
+    	return "ERROR";
+    }
+
+    tempvar = S();
+    while( match( PLUS ) || match (SUB) )
+    {
+        char operator = *yytext;
+        advance();
+        char *tempvar2 = S();
+        printf("%s %c= %s \n", tempvar , operator , tempvar2 );
+        freename(tempvar2);
+    }
+    return tempvar;
+}
+
+char *E()
 {
     /* E  -> expr E'
      * E' -> GT expr | LT expr  | EQ expr |  epsilon
@@ -149,38 +204,62 @@ void E()
     if( !legal_lookahead( NUM, ID, LP, 0 ) )
     {
     	fprintf(stderr, "%d: Missing expression\n",yylineno);
-    	return;
+    	return "ERROR";
 	}
-    expr();
+    char *tempvar = expr();
     if( match( GT ) || match (LT) || match(EQ) )
     {
+        char *tempvar2;
+        char operator = *yytext;
+        int flag=1;
+        if( match(EQ))
+            flag++;
         advance();
-        expr();
+        tempvar2 = expr();
+        if(flag==1)
+            printf("%s %c %s \n", tempvar , operator , tempvar2 );
+        else
+            printf("%s == %s \n", tempvar , tempvar2 );
+
+        freename(tempvar2);
     }
+    return tempvar;
+
 }
 
-void d()
+char *d()
 {
-    if( !legal_lookahead( NUM, ID ,LP, 0 ) )
+    char *tempvar;
+
+    if( !legal_lookahead( NUM, ID ,LP, 0 ))
     {
     	fprintf(stderr, "%d: Missing operand\n",yylineno);
-        return;
+        return "ERROR";
 	}
 	
-    if( match(NUM) || match(ID) )
+    if( match(NUM) || match(ID) ){
+        tempvar = newname();
+        printf("%s = %0.*s\n", tempvar ,yyleng,yytext);
         advance();
+        return tempvar;
+    }
 
     else if( match(LP) )
     {
         advance();
-        expr();
+        tempvar = expr();
         if( match(RP) )
             advance();
-        else
+        else{
             fprintf( stderr, "%d: Mismatched parenthesis\n", yylineno );
+            tempvar = "ERROR";
+        }
+        return tempvar;
     }
     else
     	fprintf( stderr, "%d: Number or identifier expected\n", yylineno );
+    return "ERROR";
+
 }
 #include <stdarg.h>
 
@@ -218,7 +297,7 @@ int	legal_lookahead( int first_arg , ... )
 	while( (tok = va_arg(args, int)) && p < &lookaheads[MAXFIRST] )
 	    *p++ = tok;
 
-	while( !match( SYNCH ) )
+	while( !match( SYNCH ) && !match(EOI) )
 	{
 	    for( current = lookaheads; current < p ; ++current )
 		if( match( *current ) )
@@ -240,9 +319,4 @@ int	legal_lookahead( int first_arg , ... )
 exit:
     va_end( args );
     return rval;
-}
-
-int main()
-{
-    return 0;
 }

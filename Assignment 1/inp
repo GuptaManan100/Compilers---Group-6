@@ -1,7 +1,11 @@
-a = 34;
+a := 34;
 while a < 45
 do
 begin
-	a = a+1;
-end
+	a := a+1;
+end;
+b := 48;
+if a < b
+then 
+	b:=b-a;
 

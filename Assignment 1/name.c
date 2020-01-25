@@ -1,3 +1,7 @@
+#include<stdio.h>
+#include"lex.h" 
+#include"name.h"
+
 char  *Names[] = { "t0", "t1", "t2", "t3", "t4", "t5", "t6", "t7" };   
 char  **Namep  = Names;   
    
@@ -20,4 +24,4 @@ char    *s;
     else   
     fprintf(stderr, "%d: (Internal error) Name stack underflow\n",   
                                 yylineno );   
-}   
+}
