@@ -67,7 +67,7 @@ int lex(void){
            default:
 
             if (*current == ':' && *(current+1) == '='){
-                current++;
+                yyleng++;
                 return AS;
             }
             else if(!isalnum(*current))
