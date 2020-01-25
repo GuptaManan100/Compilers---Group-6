@@ -129,11 +129,11 @@ int main() {
     printf("Calling asnge\n");
     asmgen();
     fseek(outfp,0,SEEK_SET);
-    fprintf(outfp, "    .8086\n   .Model small\n    .STACK 256\n    .DATA\n");
+    fprintf(outfp, "section .text\n global _start\nsection .data\n");
     for(int i=0;i<idx;i++){
       fprintf(outfp,"%s DW\n",var[i].elem);
     }
-    fprintf(outfp, "    .CODE\nMAIN PROC\nMOV AX,@data\nMOV ds,AX\n\n");
+    fprintf(outfp, "section .text\nstart_:\n");
     fclose(fp);
     fclose(outfp);
     return 0;
