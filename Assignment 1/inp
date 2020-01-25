@@ -1,0 +1,7 @@
+a = 34;
+while a < 45
+do
+begin
+	a = a+1;
+end
+
