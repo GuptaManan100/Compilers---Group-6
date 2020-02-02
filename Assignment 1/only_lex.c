@@ -158,7 +158,6 @@ node createNode(){
   for(int i=0;i<yyleng;i++)
   	temp->elem[i] = *(yytext+i);
   temp->elem[yyleng] = '\0';
-  fprintf(symp,"%0.*s\n", yyleng,yytext);
   return temp;//return the new node
 }
 
@@ -179,6 +178,7 @@ int findSymbol()
 	if(head == NULL)
 	{
 		head = createNode();
+		fprintf(symp,"1 - %0.*s\n",yyleng,yytext);
 		return 1;
 	}
 	int count = 1;
@@ -193,7 +193,7 @@ int findSymbol()
 		count++;
 	}
 	x = createNode();
-	count++;
+	fprintf(symp,"%d - %0.*s\n",count,yyleng,yytext);
 	prev->next = x;
 	return count;
 }

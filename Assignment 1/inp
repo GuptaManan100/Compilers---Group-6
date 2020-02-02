@@ -1,11 +1,11 @@
-a := 34;
-while a < 45
-do
-begin
-	a := a+1;
-end;
-b := 48;
-if a < b
-then 
-	b:=b-a;
-
+ax := 5;
+c := b;
+b := ard;
+while c > 0 do
+	begin
+		while a > 0 do
+		begin
+			a := a * b;
+			c := c / 2
+		end
+	end
