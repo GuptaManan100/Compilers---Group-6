@@ -98,18 +98,18 @@ int readstatement(int lblval) {
     } else {
         loadvar(tok[2]);
         loadacc(tok[0]);
+		if (!findVar(tok[2])) {
+		    strcpy(var[idx++].elem, tok[2]);
+		    var[idx].elem[0] = '\0';
+		}
     }
     printops(tok[1], lblval);
     fprintf(outfp, "MOV [%s], AX\n\n", tok[0]);
 
     if (!findVar(tok[0])) {
-        strcpy(var[idx++].elem, tok[0]);
-        var[idx].elem[0] = '\0';
-    }
-    if (!findVar(tok[2])) {
-        strcpy(var[idx++].elem, tok[2]);
-        var[idx].elem[0] = '\0';
-    }
+	    strcpy(var[idx++].elem, tok[0]);
+	    var[idx].elem[0] = '\0';
+	}
 }
 
 int printops(char* tok, int lblval) {

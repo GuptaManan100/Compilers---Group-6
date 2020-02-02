@@ -144,14 +144,11 @@ mov eax,1
 int 0x80
 
 section .bss
-t0 resb 2
 _ax resb 2
+t0 resb 2
 t1 resb 2
-5 resb 2
 _c resb 2
 _b resb 2
 _ard resb 2
-0 resb 2
 _a resb 2
 t2 resb 2
-2 resb 2
