@@ -143,7 +143,7 @@ int comp(char* tok, int lblval) {
 int main() {
     idx = 0;
     var[0].elem[0] = '\0';
-    fp = fopen("sample.txt", "r");
+    fp = fopen("intermediateCode.txt", "r");
     outfp = fopen("outfile.asm", "w+");
     if (fp == NULL) {
         printf("NO FILE EXISTS FILE\n");
