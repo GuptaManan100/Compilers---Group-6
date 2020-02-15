@@ -14,7 +14,12 @@ class Bicycle
         this.gear = gear; 
         this.speed = speed; 
     } 
-          
+    
+    public Bicycle(int speed) 
+    {  
+        this.speed = speed; 
+    } 
+
     // the Bicycle class has three methods 
     public void applyBrake(int decrement) 
     { 
@@ -73,7 +78,8 @@ public class Test
 { 
     public static void main(String args[])  
     { 
-          
+        MountainBike ms,mssa,sdd;
+        MountainBike ks;
         MountainBike mb = new MountainBike(3, 100, 25); 
         System.out.println(mb.toString()); 
               

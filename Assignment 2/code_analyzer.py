@@ -1,5 +1,5 @@
 import re
-f = open('testfile1.java', 'r')
+f = open('input.java', 'r')
 content = f.read()
 f.close()
 # remove comments from file
@@ -27,7 +27,8 @@ inclass = [x[0] for x in testinclass]
 # print(inclass)
 for x in inclass:
     testclass.append(x)
-print("Classes:", testclass, "Inherited classes:", testinclass)
+print("Classes:", len(testclass), testclass)
+print("Inherited classes:", len(testinclass) ,testinclass)
 
 
 sum1 = 0
@@ -52,8 +53,23 @@ print("Constructors:", sum1)
 
 numObjectDeclarations = 0
 for item in testclass:
-    item += '\s+[a-zA-z][a-zA-Z0-9]*\s*='
+    item += '\s+[a-zA-Z][a-zA-Z0-9]*\s*='
     x = re.findall(item, content)
+    print(x)
+    for items in x:
+        numObjectDeclarations += 1
+
+for item in testclass:
+    item += '\s+[a-zA-Z][a-zA-Z0-9]*\s*;'
+    x = re.findall(item, content)
+    print(x)
+    for items in x:
+        numObjectDeclarations += 1
+
+for item in testclass:
+    item += '\s+[a-zA-Z][a-zA-Z0-9]*\s*,'
+    x = re.findall(item, content)
+    print(x)
     for items in x:
         numObjectDeclarations += 1
 print("Objects:", numObjectDeclarations)
