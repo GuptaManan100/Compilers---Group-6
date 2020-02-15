@@ -10,7 +10,7 @@ def removeComments(string):
     string = re.sub(re.compile("/\*.*\*/", re.DOTALL), "", string)
     # remove all occurrence single-line comments (//COMMENT\n ) from string
     string = re.sub(re.compile("//.*?\n"), "", string)
-    string = re.sub(re.compile("\n"), " ", string)
+    # string = re.sub(re.compile("\n"), " ", string)
     return string
 
 
@@ -23,10 +23,8 @@ print(testclass)
 testre = re.compile(
     "class\s+([a-zA-Z][a-zA-Z0-9]*)\s+extends\s+([a-zA-Z][a-zA-Z0-9]*)\s*\{", re.DOTALL)
 testinclass = re.findall(testre, content)
+inclass = [x[0] for x in testinclass]
+print(inclass)
+for x in inclass:
+    testclass.append(x)
 print(testclass, testinclass)
-
-cons = []
-for cl in testclass:
-    testre = re.compile("class\s+"+cl+"\s*\{.*"+cl+"\s*\(.*\)\s*{", re.DOTALL)
-    cons = re.findall(testre, content)
-    print(cons)
