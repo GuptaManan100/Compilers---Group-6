@@ -55,21 +55,21 @@ numObjectDeclarations = 0
 for item in testclass:
     item += '\s+[a-zA-Z][a-zA-Z0-9]*\s*='
     x = re.findall(item, content)
-    print(x)
+    #print(x)
     for items in x:
         numObjectDeclarations += 1
 
 for item in testclass:
     item += '\s+[a-zA-Z][a-zA-Z0-9]*\s*;'
     x = re.findall(item, content)
-    print(x)
+    #print(x)
     for items in x:
         numObjectDeclarations += 1
 
 for item in testclass:
     item += '\s+[a-zA-Z][a-zA-Z0-9]*\s*,'
     x = re.findall(item, content)
-    print(x)
+    #print(x)
     for items in x:
         numObjectDeclarations += 1
 print("Objects:", numObjectDeclarations)

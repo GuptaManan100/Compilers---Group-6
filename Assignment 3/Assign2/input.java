@@ -55,6 +55,12 @@ class MountainBike extends Bicycle
         super(gear, speed); 
         seatHeight = startHeight; 
     }  
+
+    public MountainBike(int gear,int speed) 
+    { 
+        // invoking base-class(Bicycle) constructor 
+        super(gear, speed); 
+    } 
           
     // the MountainBike subclass adds one more method 
     public void setHeight(int newValue) 
@@ -80,6 +86,7 @@ public class Test
     { 
         MountainBike ms,mssa,sdd;
         MountainBike ks;
+        Test dsd,dsadsad;
         MountainBike mb = new MountainBike(3, 100, 25); 
         System.out.println(mb.toString()); 
               
