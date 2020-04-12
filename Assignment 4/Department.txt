@@ -1,0 +1,5 @@
+did, dname, numberPeople
+1, CSE, 400
+2, MnC, 60
+3, EP, 38
+4, ECE, 90

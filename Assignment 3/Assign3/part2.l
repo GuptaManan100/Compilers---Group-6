@@ -2,7 +2,7 @@
 %{
 	#include <stdlib.h>
 	#include <string.h>
-	#include "y.tab.h"
+	#include "part2.tab.h"
 	extern int count_line;
 %}
 b				[ ]*
