@@ -4,7 +4,7 @@
 
 	int count_line = 1;
 	extern int yylex();
-	void yyerror(char *s)
+	void yyerror(string s)
 	{
 		cout<<"INVALID SYNTAX at line no "<<count_line<<"\n";
 		exit(1);
@@ -33,7 +33,7 @@ statement : ifStart body |
 			switchStart switch_body |
 			RETURN exp SEMI |
 			exp SEMI |
-			var_dec  SEMI|
+			var_dec|
 			forStart body
 
 ifStart : IF LRB exp_rel RRB

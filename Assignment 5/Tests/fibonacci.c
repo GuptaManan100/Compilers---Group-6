@@ -1,7 +1,12 @@
-int fibonacci(int x){
-	int fir = fibonacci(x-1);
-	int sec = fibonacci(x-2);
-	return fir+sec;
+int fibonacci(int x)
+{
+	if(x==1 || x==0)
+	{
+		return 1;
+	}
+	int ans;
+	ans = fibonacci(x-1) + fibonacci(x-2);
+	return ans;
 }
 
 int main()

@@ -1,7 +1,8 @@
 %{
-	#include <stdlib.h>
-	#include <string.h>
+	#include<bits/stdc++.h>
 	extern int count_line;
+	#include "compiler.tab.h"
+	using namespace std;
 %}
 
 %%
