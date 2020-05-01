@@ -18,5 +18,7 @@ int main()
 			y = 1;
 	}
 
+	printf(y);
+
 	return 0;
 }

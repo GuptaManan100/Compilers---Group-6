@@ -45,6 +45,7 @@
 "break"		{return BREAK;}
 "continue"	{return CONTINUE;}
 "return"	{return RETURN;}
+"printf"	{return PRINTF;}
 ([0-9]+)	{return INTNUM;}
 ([0-9]+\.[0-9]+)	{return FLOATNUM;}
 [_a-zA-Z]([a-zA-Z0-9_]*)	{return ID;}
