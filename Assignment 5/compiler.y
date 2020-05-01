@@ -23,7 +23,7 @@
 
 begin : declaration_list INT MAIN LRB RRB body
 
-statements : statement statements | 
+statements : statements M statement | 
 
 statement : ifStart body |
 			ifStart body N ELSE M body |
