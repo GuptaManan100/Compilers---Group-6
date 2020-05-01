@@ -128,6 +128,16 @@ class SymbolTable{
         addLevel();
     }
 
+    void printVars(){
+        cout<<"level: "<<level<<endl;
+        for(int i=0;i<=level;i++)
+        {
+            cout<<"----------"<<i<<"-----------"<<endl;
+            for(auto x: vars[i])
+                cout<<x.first<<" "<<x.second->name<<endl;
+        }
+    }
+
 };
 
 #endif

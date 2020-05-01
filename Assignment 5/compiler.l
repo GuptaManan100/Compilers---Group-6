@@ -2,6 +2,7 @@
 	#include<bits/stdc++.h>
 	extern int count_line;
 	#include "compiler.tab.h"
+	#include"unionStructs.h"
 	using namespace std;
 %}
 
@@ -46,9 +47,9 @@
 "continue"	{return CONTINUE;}
 "return"	{return RETURN;}
 "printf"	{return PRINTF;}
-([0-9]+)	{return INTNUM;}
-([0-9]+\.[0-9]+)	{return FLOATNUM;}
-[_a-zA-Z]([a-zA-Z0-9_]*)	{return ID;}
+([0-9]+)	{yylval.s = new struct str(yytext);return INTNUM;}
+([0-9]+\.[0-9]+)	{yylval.s = new struct str(yytext);return FLOATNUM;}
+[_a-zA-Z]([a-zA-Z0-9_]*)	{yylval.s = new struct str(yytext);return ID;}
 ([ \t\r]+)	{ }
 \n			{count_line++;}
 .			{return ERR;}

@@ -1,7 +1,10 @@
 %{
 	#include<bits/stdc++.h>
 	#include"additionalClasses.h"
+	#include"unionStructs.h"
 	using namespace std;
+	const int INTREGS = 10;
+	const int FLOATREGS = 10;
 
 	int count_line = 1;
 	extern int yylex();
@@ -14,12 +17,74 @@
 	{
 		return 1;
 	}
+
+	int floatTemps[FLOATREGS];
+	int intTemps[INTREGS];
+
+	vector<string> instructions;
+	int curInstr;
+	int intVarNum;
+	int floatVarNum;
+
+	stack<int> breakInsts;
+	stack<int> continueInsts;
+
+	string genVarName(dataType dt)
+	{
+		string ans;
+		if(dt==_float)
+		{
+			ans = "f" + to_string(floatVarNum++);
+		}
+		else{
+			ans = "i" + to_string(intVarNum++);
+		}
+		return ans;
+	}
+
+	int findFreeFloatVariable()
+	{
+		for(int i=0;i<FLOATREGS;i++)
+		{
+			if(floatTemps[i]==0)
+			{
+				floatTemps[i] = 1;
+				return i;
+			}
+		}
+		cout<<"Statement Too complex. Ran out of Float Temporary Variables at line "<<count_line<<"\n";
+		exit(1);
+	}
+	int findFreeIntVariable()
+	{
+		for(int i=0;i<INTREGS;i++)
+		{
+			if(intTemps[i]==0)
+			{
+				intTemps[i] = 1;
+				return i;
+			}
+		}
+		cout<<"Statement Too complex. Ran out of Int Temporary Variables at line "<<count_line<<"\n";
+		exit(1);
+	}
+
+	SymbolTable symTab;
 %}
 
 %token MUL DIV SUB ADD SEMI COLON EQUAL MOD GT LT LTE GTE EQ NEQ OR AND LCB RCB LRB RRB NOT COM INT VOID FLOAT MAIN FOR WHILE IF ELSE SWITCH DEFAULT PRINTF CASE BREAK CONTINUE RETURN INTNUM FLOATNUM ID ERR
 
 %start begin
 
+%union{
+	struct str * s;
+	int num;
+	struct vecStr * v;
+}
+
+%type<s> ID
+%type<num> paramType
+%type<v> varNames
 %%
 
 begin : declaration_list INT MAIN LRB RRB body
@@ -85,11 +150,34 @@ parametersDecNonEmpty : paramDec | paramDec COM parametersDecNonEmpty
 
 paramDec : paramType ID
 
-paramType : INT | FLOAT
+paramType : INT {$$ = 0;}
+			| FLOAT {$$ = 1;}
 
-var_dec : paramType varNames SEMI
+var_dec : paramType varNames SEMI{
+				dataType varTypes = _int;
+				if($1==1)
+				{
+					varTypes = _float;
+				}
+				for(auto vx: $2->x)
+				{
+					if(symTab.addVariable(vx,varTypes,genVarName(varTypes) )==1)
+					{
+						cout<<"Variable Redclaration of "<<vx<<" at "<<count_line<<endl;
+						exit(1);
+					}
+				}
+			}
 
-varNames : ID | ID COM varNames
+varNames :	ID {
+				struct vecStr * newVec = new struct vecStr;
+				newVec->addString($1->x);
+				$$ = newVec;
+			}
+			| ID COM varNames{
+				$$ = $3;
+				$$->addString($1->x);
+			}
 
 exp_rel : exp_rel OR M exp_rel_and | exp_rel_and
 
@@ -121,5 +209,13 @@ paramListNonEmpty : exp COM paramListNonEmpty | exp
 
 int main()
 {
+	curInstr = 0;
+	intVarNum = 0;
+	floatVarNum = 0;
+	for(int i=0;i<FLOATREGS;i++)
+		floatTemps[i] = 0;
+	for(int i=0;i<INTREGS;i++)
+		intTemps[i] = 0;
 	yyparse();
+	//symTab.printVars();
 } 
