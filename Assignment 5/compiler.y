@@ -1,5 +1,6 @@
 %{
 	#include<bits/stdc++.h>
+	#include"additionalClasses.h"
 	using namespace std;
 
 	int count_line = 1;
@@ -35,11 +36,14 @@ statement : ifStart body |
 			exp SEMI |
 			var_dec|
 			forStart body |
-			PRINTF LRB ID RRB SEMI
+			PRINTF LRB ID RRB SEMI |
+			LevelInc body
 
 ifStart : IF LRB exp_rel RRB
 
-whileStart: WHILE M LRB exp_rel RRB
+LevelInc :
+
+whileStart : WHILE M LRB exp_rel RRB
 
 forStart: FOR LRB for_init for_cond for_endLoop RRB
 
