@@ -11,7 +11,7 @@
 	extern int yylex();
 	void yyerror(string s)
 	{
-		cout<<"INVALID SYNTAX at line no "<<count_line<<"\n";
+		cout<<s<<endl<<"INVALID SYNTAX at line no "<<count_line<<"\n";
 		exit(1);
 	}
 	int yywrap()
@@ -102,14 +102,11 @@
 
 %type<E> exp exp_sec exp_sim exp_term
 %type<s> ID op_high op_low INTNUM FLOATNUM LRB RRB
-%type<num> paramType
-%type<v> varNames body
+%type<num> paramType paramList paramListNonEmpty
+%type<v> varNames 
 %%
 
-begin : declaration_list INT MAIN LRB RRB body {
-	// body is a string of vectors
-	instructions.insert(instructions.end(),$6->x.begin(),$6->x.end());
-}
+begin : declaration_list INT MAIN LRB RRB body 
 
 statements : statements M statement | 
 
@@ -120,10 +117,8 @@ statement : ifStart body |
 			whileStart body |
 			switchStart switch_body |
 			RETURN exp SEMI |
-			exp SEMI {
-
-			}
-			| var_dec|
+			exp SEMI |
+			var_dec|
 			forStart body |
 			PRINTF LRB ID RRB SEMI |
 			LevelInc body
@@ -166,9 +161,7 @@ func_dec : func_head body
 
 func_head : func_id LRB parametersDec RRB
 
-func_id : paramType ID {
-			dataType retType = (( $1 == 1 )?_float:_int);
-		}
+func_id : paramType ID
 		| VOID ID
 
 parametersDec : parametersDecNonEmpty | 
@@ -218,7 +211,6 @@ relOp : GT | LT | GTE | LTE | EQ | NEQ
 
 exp : ID EQUAL exp {
 			struct expr *E = new struct expr;
-			E->addcode($3);
 			Variable * temp = symTab.findVariable($1->x);
 			if(temp->type!=$3->type && $3->type == _float){
 				string t = genVarName(_float);
@@ -227,33 +219,28 @@ exp : ID EQUAL exp {
 				temp = symTab.findVariable($1->x);
 			}
 			freeTempVariable($3->addr);
-			E->code.push_back( temp->name+ " = " + $3->addr);
+			instructions.push_back( temp->name+ " = " + $3->addr);
 			$$ = E;
-			E->dbgcode();
 		}
 	| exp_sim {
 			struct expr *E = new struct expr;
 			E->addr = $1->addr;
-			E->code = $1->code;
 			E->type = $1->type;
 			$$ = E;
 		}
 
 exp_sim : exp_sim op_high exp_sec {
 			struct expr *E = new struct expr;
-			E->addcode($1);
-			E->addcode($3);
 			E->setType($1->type,$3->type);
 			E->addr = getTempVariable(E->type);
 			freeTempVariable($1->addr);
 			freeTempVariable($3->addr);
-			E->code.push_back(E->addr+" = "+$1->addr+$2->x+$3->addr);
+			instructions.push_back(E->addr+" = "+$1->addr+$2->x+$3->addr);
 			$$ = E;
 		}
 		| exp_sec {
 			struct expr *E = new struct expr;
 			E->addr = $1->addr;
-			E->code = $1->code;
 			E->type = $1->type;
 			$$ = E;
 		}
@@ -267,19 +254,17 @@ op_low :  MUL {$$ = new str(" * ");}
 
 exp_sec : exp_sec op_low exp_term {
 			struct expr *E = new struct expr;
-			E->addcode($1);
-			E->addcode($3);
 			E->setType($1->type,$3->type);
 			E->addr = getTempVariable(E->type);
 			freeTempVariable($1->addr);
 			freeTempVariable($3->addr);
-			E->code.push_back(E->addr+" = "+$1->addr+$2->x+$3->addr);
+			instructions.push_back(E->addr+" = "+$1->addr+$2->x+$3->addr);
+
 			$$ = E;
 		}
 		| exp_term{
 			struct expr *E = new struct expr;
 			E->addr = $1->addr;
-			E->code = $1->code;
 			E->type = $1->type;
 			$$ = E;
 		}
@@ -287,7 +272,6 @@ exp_sec : exp_sec op_low exp_term {
 exp_term : LRB exp RRB {
 				struct expr *E = new struct expr;
 				E->addr = $2->addr;
-				E->code = $2->code;
 				E->type = $2->type;
 				$$ = E;
 			}
@@ -311,12 +295,26 @@ exp_term : LRB exp RRB {
 				$$ = E;
 			}
 			| ID LRB paramList RRB {
-				;
+				Function *temp = symTab.findFunction($1->x);
+				// if(!temp) yyerror("Function not defined");
+				struct expr *E = new struct expr;
+				E->type = temp->returnType;
+				E->addr = getTempVariable(temp->returnType);
+
+				instructions.pb(E->addr+" = "+to_string($3));
+				$$=E;
 			}
 
-paramList : paramListNonEmpty | 
+paramList : paramListNonEmpty {$$ = $1;} 
 
-paramListNonEmpty : exp COM paramListNonEmpty | exp
+paramListNonEmpty : exp COM paramListNonEmpty {
+						instructions.pb("param"+$1->addr);
+						$$ = $3+1;
+					}
+					| exp {
+						instructions.pb("param"+$1->addr);
+						$$=1;
+					}
 
 %%
 

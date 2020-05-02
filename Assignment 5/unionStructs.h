@@ -16,15 +16,7 @@ struct vecStr {
 };
 struct expr {
     string addr;
-    vector<string> code;
     dataType type;
-    void addcode(expr *a) {
-        code.insert(code.end(), a->code.begin(), a->code.end());
-    }
-    void dbgcode() {
-        for (auto it : code) cerr << it << endl;
-        cerr << endl;
-    }
     void setType(dataType a = _int, dataType b = _int) {
         type = _int;
         if (a == _float || b == _float) type = _float;
