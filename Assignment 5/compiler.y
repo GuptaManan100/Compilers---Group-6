@@ -7,6 +7,7 @@
 	const int FLOATREGS = 10;
 
 	int count_line = 1;
+	int cttemp=0;
 	extern int yylex();
 	void yyerror(string s)
 	{
@@ -71,7 +72,9 @@
 
 	SymbolTable symTab;
 %}
-
+%code requires{
+	#include "unionStructs.h"
+}
 %token MUL DIV SUB ADD SEMI COLON EQUAL MOD GT LT LTE GTE EQ NEQ OR AND LCB RCB LRB RRB NOT COM INT VOID FLOAT MAIN FOR WHILE IF ELSE SWITCH DEFAULT PRINTF CASE BREAK CONTINUE RETURN INTNUM FLOATNUM ID ERR
 
 %start begin
@@ -80,9 +83,11 @@
 	struct str * s;
 	int num;
 	struct vecStr * v;
+	struct expr * E;
 }
 
-%type<s> ID
+%type<E> exp exp_sec exp_sim exp_term
+%type<s> ID op_high op_low INTNUM FLOATNUM LRB RRB
 %type<num> paramType
 %type<v> varNames
 %%
@@ -189,17 +194,88 @@ exp_rel_term : LRB exp_rel RRB | exp relOp exp
 
 relOp : GT | LT | GTE | LTE | EQ | NEQ
 
-exp : ID EQUAL exp | exp_sim
+exp : ID EQUAL exp {
+			struct expr *E = new struct expr;
+			E->addcode($3);
+			E->code.push_back($1->x + " = " + $3->addr);
+			$$ = E;
+			E->dbgcode();
+		}
+	| exp_sim {
+			struct expr *E = new struct expr;
+			E->addr = $1->addr;
+			E->code = $1->code;
+			E->dbgcode();
 
-exp_sim : exp_sim op_high exp_sec | exp_sec
+			$$ = E;
+		}
 
-op_high : ADD | SUB
+exp_sim : exp_sim op_high exp_sec {
+			struct expr *E = new struct expr;
+			E->tempaddr(cttemp++);
+			E->addcode($1);
+			E->addcode($3);
+			E->code.push_back($1->addr+$2->x+$3->addr);
+			E->dbgcode();
 
-op_low : MUL | DIV | MOD
+			$$ = E;
+		}
+		| exp_sec {
+			struct expr *E = new struct expr;
+			E->addr = $1->addr;
+			E->code = $1->code;
+			E->dbgcode();
 
-exp_sec : exp_sec op_low exp_term | exp_term
+			$$ = E;
+		}
 
-exp_term : LRB exp RRB | ID | INTNUM | FLOATNUM | ID LRB paramList RRB
+op_high : ADD {$$ = new str(" + ");} 
+		| SUB {$$ = new str(" - ");}
+
+op_low :  MUL {$$ = new str(" * ");}
+		| DIV {$$ = new str(" / ");}
+		| MOD {$$ = new str(" % ");}
+
+exp_sec : exp_sec op_low exp_term {
+			struct expr *E = new struct expr;
+			E->tempaddr(cttemp++);
+			E->addcode($1);
+			E->addcode($3);
+			E->code.push_back($1->addr+$2->x+$3->addr);
+			E->dbgcode();
+			$$ = E;
+		}
+		| exp_term{
+			struct expr *E = new struct expr;
+			E->addr = $1->addr;
+			E->code = $1->code;
+			$$ = E;
+		}
+
+exp_term : LRB exp RRB {
+				struct expr *E = new struct expr;
+				E->addr = $2->addr;
+				E->code = $2->code;
+				$$ = E;
+			}
+			| ID {			
+				struct expr *E = new struct expr;
+				E->addr = $1->x;
+				$$ = E;
+			}
+			| INTNUM {			
+				struct expr *E = new struct expr;
+				E->addr = $1->x;
+				$$ = E;
+			}
+			| FLOATNUM {
+				struct expr *E = new struct expr;
+				E->addr = $1->x;
+				$$ = E;
+			}
+			| ID LRB paramList RRB {
+				;
+			}
 
 paramList : paramListNonEmpty | 
 
