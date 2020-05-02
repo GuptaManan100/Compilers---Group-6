@@ -69,6 +69,20 @@
 		cout<<"Statement Too complex. Ran out of Int Temporary Variables at line "<<count_line<<"\n";
 		exit(1);
 	}
+	string getTempVariable(dataType type){
+		if(type==_float){
+			return "tf"+to_string(findFreeFloatVariable());
+		}
+
+		return "ti"+to_string(findFreeIntVariable());
+	}
+	
+	void freeTempVariable(string t){
+		if(t[0]!='t') return;
+		int k = stoi(t.substr(2));
+		if(t[1]=='i') intTemps[k]=0;
+		else floatTemps[k] = 0;
+	}
 
 	SymbolTable symTab;
 %}
@@ -89,10 +103,13 @@
 %type<E> exp exp_sec exp_sim exp_term
 %type<s> ID op_high op_low INTNUM FLOATNUM LRB RRB
 %type<num> paramType
-%type<v> varNames
+%type<v> varNames body
 %%
 
-begin : declaration_list INT MAIN LRB RRB body
+begin : declaration_list INT MAIN LRB RRB body {
+	// body is a string of vectors
+	instructions.insert(instructions.end(),$6->x.begin(),$6->x.end());
+}
 
 statements : statements M statement | 
 
@@ -103,8 +120,10 @@ statement : ifStart body |
 			whileStart body |
 			switchStart switch_body |
 			RETURN exp SEMI |
-			exp SEMI |
-			var_dec|
+			exp SEMI {
+
+			}
+			| var_dec|
 			forStart body |
 			PRINTF LRB ID RRB SEMI |
 			LevelInc body
@@ -147,7 +166,10 @@ func_dec : func_head body
 
 func_head : func_id LRB parametersDec RRB
 
-func_id : paramType ID | VOID ID
+func_id : paramType ID {
+			dataType retType = (( $1 == 1 )?_float:_int);
+		}
+		| VOID ID
 
 parametersDec : parametersDecNonEmpty | 
 
@@ -197,22 +219,34 @@ relOp : GT | LT | GTE | LTE | EQ | NEQ
 exp : ID EQUAL exp {
 			struct expr *E = new struct expr;
 			E->addcode($3);
-			E->code.push_back($1->x + " = " + $3->addr);
+			Variable * temp = symTab.findVariable($1->x);
+			if(temp->type!=$3->type && $3->type == _float){
+				string t = genVarName(_float);
+				// E->code.push_back(t+" = "+temp->name);
+				symTab.upgradeVariable($1->x,_float,t);
+				temp = symTab.findVariable($1->x);
+			}
+			freeTempVariable($3->addr);
+			E->code.push_back( temp->name+ " = " + $3->addr);
 			$$ = E;
-			// E->dbgcode();
+			E->dbgcode();
 		}
 	| exp_sim {
 			struct expr *E = new struct expr;
 			E->addr = $1->addr;
 			E->code = $1->code;
+			E->type = $1->type;
 			$$ = E;
 		}
 
 exp_sim : exp_sim op_high exp_sec {
 			struct expr *E = new struct expr;
-			E->tempaddr(cttemp++);
 			E->addcode($1);
 			E->addcode($3);
+			E->setType($1->type,$3->type);
+			E->addr = getTempVariable(E->type);
+			freeTempVariable($1->addr);
+			freeTempVariable($3->addr);
 			E->code.push_back(E->addr+" = "+$1->addr+$2->x+$3->addr);
 			$$ = E;
 		}
@@ -220,6 +254,7 @@ exp_sim : exp_sim op_high exp_sec {
 			struct expr *E = new struct expr;
 			E->addr = $1->addr;
 			E->code = $1->code;
+			E->type = $1->type;
 			$$ = E;
 		}
 
@@ -232,9 +267,12 @@ op_low :  MUL {$$ = new str(" * ");}
 
 exp_sec : exp_sec op_low exp_term {
 			struct expr *E = new struct expr;
-			E->tempaddr(cttemp++);
 			E->addcode($1);
 			E->addcode($3);
+			E->setType($1->type,$3->type);
+			E->addr = getTempVariable(E->type);
+			freeTempVariable($1->addr);
+			freeTempVariable($3->addr);
 			E->code.push_back(E->addr+" = "+$1->addr+$2->x+$3->addr);
 			$$ = E;
 		}
@@ -242,6 +280,7 @@ exp_sec : exp_sec op_low exp_term {
 			struct expr *E = new struct expr;
 			E->addr = $1->addr;
 			E->code = $1->code;
+			E->type = $1->type;
 			$$ = E;
 		}
 
@@ -249,21 +288,26 @@ exp_term : LRB exp RRB {
 				struct expr *E = new struct expr;
 				E->addr = $2->addr;
 				E->code = $2->code;
+				E->type = $2->type;
 				$$ = E;
 			}
 			| ID {			
 				struct expr *E = new struct expr;
-				E->addr = $1->x;
+				Variable * temp = symTab.findVariable($1->x);
+				E->addr = temp->name;
+				E->type = temp->type;
 				$$ = E;
 			}
 			| INTNUM {			
 				struct expr *E = new struct expr;
 				E->addr = $1->x;
+				E->type = _int;
 				$$ = E;
 			}
 			| FLOATNUM {
 				struct expr *E = new struct expr;
 				E->addr = $1->x;
+				E->type = _float;
 				$$ = E;
 			}
 			| ID LRB paramList RRB {

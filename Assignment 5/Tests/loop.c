@@ -11,9 +11,12 @@ int main() {
         }
     }
     int a, b;
+    float c;
+    c = 1.0;
     a = 5;
     b = 4;
-    a = a * (b + 8 - 5);
+    a = 1 + 1;
+    a = a * (b + 8 - 5) + b * (a + b) / (c + a);
 
     return 0;
 }

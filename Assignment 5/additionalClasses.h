@@ -73,6 +73,13 @@ class SymbolTable {
         return 0;
     }
 
+    int upgradeVariable(string s, dataType dt, string id) {
+        if (level < 0) return 1;
+        delete vars[level][s];
+        vars[level][s] = new Variable(dt, id);
+        return 0;
+    }
+
     int addFunction(string s, dataType ret, string id) {
         if (findFunction(s) || findVariable(s)) return 1;
         funcs[s] = new Function(ret, id);
