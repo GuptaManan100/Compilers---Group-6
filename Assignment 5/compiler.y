@@ -199,14 +199,12 @@ exp : ID EQUAL exp {
 			E->addcode($3);
 			E->code.push_back($1->x + " = " + $3->addr);
 			$$ = E;
-			E->dbgcode();
+			// E->dbgcode();
 		}
 	| exp_sim {
 			struct expr *E = new struct expr;
 			E->addr = $1->addr;
 			E->code = $1->code;
-			E->dbgcode();
-
 			$$ = E;
 		}
 
@@ -215,17 +213,13 @@ exp_sim : exp_sim op_high exp_sec {
 			E->tempaddr(cttemp++);
 			E->addcode($1);
 			E->addcode($3);
-			E->code.push_back($1->addr+$2->x+$3->addr);
-			E->dbgcode();
-
+			E->code.push_back(E->addr+" = "+$1->addr+$2->x+$3->addr);
 			$$ = E;
 		}
 		| exp_sec {
 			struct expr *E = new struct expr;
 			E->addr = $1->addr;
 			E->code = $1->code;
-			E->dbgcode();
-
 			$$ = E;
 		}
 
@@ -241,8 +235,7 @@ exp_sec : exp_sec op_low exp_term {
 			E->tempaddr(cttemp++);
 			E->addcode($1);
 			E->addcode($3);
-			E->code.push_back($1->addr+$2->x+$3->addr);
-			E->dbgcode();
+			E->code.push_back(E->addr+" = "+$1->addr+$2->x+$3->addr);
 			$$ = E;
 		}
 		| exp_term{

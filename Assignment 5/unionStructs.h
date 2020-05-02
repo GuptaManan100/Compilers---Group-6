@@ -19,9 +19,8 @@ struct expr {
         code.insert(code.end(), a->code.begin(), a->code.end());
     }
     void dbgcode() {
-        cerr << addr << endl;
         for (auto it : code) cerr << it << endl;
-        cout << endl;
+        cerr << endl;
     }
     string tempaddr(int val = 0) { return addr = "__temp" + to_string(val); }
 };
