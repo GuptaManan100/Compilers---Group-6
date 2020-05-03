@@ -1,14 +1,18 @@
-int main()
-{
-	int x;
-	x = 7;
-	int y;
-	y = 1;
+int main() {
+    int x;
+    x = 7;
+    int y;
+    y = 1;
 
-	if ( x<100 || y>200 && x>50) {
+    if (x < 100 || y > 200 && x > 50) {
         x = 1;
         y = 10;
     }
     y = 1;
-	return 0;
+
+    x = 7;
+    while (x < 7) {
+        x = x - 1;
+    }
+    return 0;
 }

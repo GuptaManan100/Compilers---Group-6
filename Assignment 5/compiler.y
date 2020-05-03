@@ -169,7 +169,16 @@ statement : ifStart M body {
 			}
 			| BREAK SEMI 
 			| CONTINUE SEMI 
-			| whileStart body 
+			| M WHILE M LRB exp_rel RRB M body {
+				struct stmt *S = new struct stmt;
+				backpatch($8->nextlist,$3);
+				backpatch($5->truelist,$7);
+				S->nextlist = $5->falselist;
+				list <int> * temp  = makelist(instructions.size());
+				instructions.pb("");
+				backpatch(temp,$1);
+				$$ = S;
+			}
 			| switchStart switch_body 
 			| RETURN exp SEMI 
 			| exp SEMI {
@@ -190,8 +199,6 @@ statement : ifStart M body {
 ifStart : IF LRB exp_rel RRB {$$ = $3;}
 
 LevelInc :
-
-whileStart : WHILE M LRB exp_rel RRB
 
 forStart: FOR LRB for_init for_cond for_endLoop RRB
 
@@ -301,6 +308,8 @@ exp_rel_term : LRB exp_rel RRB { $$ = $2; }
 				   S->truelist = makelist( nextInstr );
 				   S->falselist = makelist( nextInstr+1 );
 				   instructions.push_back("if "+ $1->addr + $2->x + $3->addr + " ");
+				   freeTempVariable($1->addr);
+				   freeTempVariable($3->addr);
 				   instructions.push_back("");
 				   $$ = S;
 			   }
