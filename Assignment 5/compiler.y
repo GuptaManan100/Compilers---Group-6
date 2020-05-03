@@ -139,12 +139,13 @@
 %type<s> ID op_high op_low INTNUM FLOATNUM LRB RRB relOp
 %type<num> paramType paramList paramListNonEmpty M
 %type<v> varNames
-%type<S> exp_rel exp_rel_and exp_rel_not exp_rel_term ifStart statement statements body N
+%type<S> exp_rel for_cond for_endLoop for_init exp_rel_and exp_rel_not exp_rel_term ifStart statement statements body N
 %%
 
 begin : declaration_list INT MAIN LRB RRB body 
 
 statements : statements M statement {
+				instructions.pb(" ");
 				backpatch($1->nextlist,$2);
 				$$ = $3;
 			 }
@@ -169,14 +170,14 @@ statement : ifStart M body {
 			}
 			| BREAK SEMI 
 			| CONTINUE SEMI 
-			| WHILE M LRB exp_rel RRB M body {
+			| WHILE M LRB exp_rel RRB M body N{
 				struct stmt *S = new struct stmt;
 				backpatch($7->nextlist,$2);
 				backpatch($4->truelist,$6);
 				S->nextlist = $4->falselist;
-				list <int> * temp  = makelist(instructions.size());
-				instructions.pb("");
-				backpatch(temp,$2);
+				// list <int> * temp  = makelist(instructions.size());
+				// instructions.pb("");
+				backpatch($8->nextlist,$2);
 				$$ = S;
 			}
 			| switchStart switch_body 
@@ -191,8 +192,18 @@ statement : ifStart M body {
 				struct stmt *S = new struct stmt;
 				S->nextlist = NULL;
 				$$ = S;
+				cout<<"we are here"<<endl;
+
 			}
-			| forStart body 
+			| FOR LRB for_init M for_cond M for_endLoop N RRB M body N{
+				struct stmt *S = new struct stmt;
+				backpatch($11->nextlist,$4);
+				backpatch($5->truelist,$10);
+				S->nextlist = $5->falselist;
+				backpatch($12->nextlist,$6);
+				backpatch($8->nextlist,$4);
+				$$ = S;
+			}
 			| PRINTF LRB ID RRB SEMI 
 			| LevelInc body
 
@@ -200,17 +211,25 @@ ifStart : IF LRB exp_rel RRB {$$ = $3;}
 
 LevelInc :
 
-forStart: FOR LRB for_init for_cond for_endLoop RRB
-
 switchStart: SWITCH LRB exp RRB
 
 body : LCB statements RCB {$$ = $2;}
 
-for_init : exp SEMI
+for_init : exp SEMI{
+				freeTempVariable($1->addr);
+				struct stmt *S = new struct stmt;
+				S->nextlist = NULL;
+				$$ = S;
+			}
 
-for_cond : exp_rel SEMI
+for_cond : exp_rel SEMI {$$ = $1;}
 
-for_endLoop : exp 
+for_endLoop : exp {
+				freeTempVariable($1->addr);
+				struct stmt *S = new struct stmt;
+				S->nextlist = NULL;
+				$$ = S;
+			}
 
 switch_body : LCB case_list Default_case RCB
 
@@ -263,6 +282,7 @@ var_dec : paramType varNames SEMI{
 						exit(1);
 					}
 				}
+
 			}
 
 varNames :	ID {
@@ -337,7 +357,7 @@ exp : ID EQUAL exp {
 			Variable * temp = symTab.findVariable($1->x);
 			if(temp==NULL)
 			{
-				yyerror("Undefined Variable.");
+				yyerror(" Undefined Variable . ");
 			}
 			if(temp->type!=$3->type){
 				string t = getTempVariable(temp->type);

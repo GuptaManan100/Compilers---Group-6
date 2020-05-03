@@ -8,6 +8,8 @@ int main() {
         x = 1;
         y = 10;
     }
+
+    x = 7;
     while (x < 7) {
         x = x - 1;
     }
