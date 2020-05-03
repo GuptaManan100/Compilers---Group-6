@@ -89,6 +89,12 @@
 	}
 
 	list<int> *mergelist(list<int> *a,list<int> *b){
+		if(!a){
+			return b;
+		}
+		if(!b){
+			return a;
+		}
         list<int> *temp = new list<int>;
         temp->merge(*a);
         temp->merge(*b);
@@ -102,12 +108,15 @@
     }
 
     void backpatch(list<int> *a,int i){
+		if(!a){
+			return;
+		}
 		string label = getLabel();
         for(auto x: *a){
-            instructions[x] += " goto " + label;
+            instructions[x] += "goto " + label;
         }
 		instructions[i] = label + ": " + instructions[i];
-    }
+	}
 
 	SymbolTable symTab;
 %}
@@ -130,29 +139,55 @@
 %type<s> ID op_high op_low INTNUM FLOATNUM LRB RRB relOp
 %type<num> paramType paramList paramListNonEmpty M
 %type<v> varNames
-%type<S> exp_rel exp_rel_and exp_rel_not exp_rel_term
+%type<S> exp_rel exp_rel_and exp_rel_not exp_rel_term ifStart statement statements body N
 %%
 
 begin : declaration_list INT MAIN LRB RRB body 
 
-statements : statements M statement | 
+statements : statements M statement {
+				backpatch($1->nextlist,$2);
+				$$ = $3;
+			 }
+			 | { struct stmt *S = new struct stmt;
+			 	 S->nextlist = NULL;
+				 $$ = S;	
+			 }
 
-statement : ifStart body |
-			ifStart body N ELSE M body |
-			BREAK SEMI |
-			CONTINUE SEMI |
-			whileStart body |
-			switchStart switch_body |
-			RETURN exp SEMI |
-			exp SEMI {
+statement : ifStart M body {
+				struct stmt *S = new struct stmt;
+				backpatch($1->truelist,$2);
+				S->nextlist = mergelist($1->falselist,$3->nextlist);
+				$$ = S;
+			}
+			| ifStart M body N ELSE M body {
+				struct stmt *S = new struct stmt;
+				backpatch($1->truelist,$2);
+				backpatch($1->falselist,$6);
+				S->nextlist = mergelist($3->nextlist,$4->nextlist);
+				S->nextlist = mergelist(S->nextlist,$7->nextlist);
+				$$ = S;
+			}
+			| BREAK SEMI 
+			| CONTINUE SEMI 
+			| whileStart body 
+			| switchStart switch_body 
+			| RETURN exp SEMI 
+			| exp SEMI {
 				freeTempVariable($1->addr);
-			} |
-			var_dec|
-			forStart body |
-			PRINTF LRB ID RRB SEMI |
-			LevelInc body
+				struct stmt *S = new struct stmt;
+				S->nextlist = NULL;
+				$$ = S;
+			} 
+			| var_dec {
+				struct stmt *S = new struct stmt;
+				S->nextlist = NULL;
+				$$ = S;
+			}
+			| forStart body 
+			| PRINTF LRB ID RRB SEMI 
+			| LevelInc body
 
-ifStart : IF LRB exp_rel RRB
+ifStart : IF LRB exp_rel RRB {$$ = $3;}
 
 LevelInc :
 
@@ -162,7 +197,7 @@ forStart: FOR LRB for_init for_cond for_endLoop RRB
 
 switchStart: SWITCH LRB exp RRB
 
-body : LCB statements RCB
+body : LCB statements RCB {$$ = $2;}
 
 for_init : exp SEMI
 
@@ -180,7 +215,12 @@ Default_case : DEFAULT COLON statements |
 
 M : {$$ = instructions.size();}
 
-N : 
+N : {	struct stmt *S = new struct stmt;
+		int nextInstr = instructions.size();
+		S->nextlist = makelist(nextInstr);
+		instructions.push_back("");
+		$$ = S;
+	}
 
 declaration_list : declaration_list declaration |
 
@@ -260,7 +300,7 @@ exp_rel_term : LRB exp_rel RRB { $$ = $2; }
 				   int nextInstr = instructions.size();
 				   S->truelist = makelist( nextInstr );
 				   S->falselist = makelist( nextInstr+1 );
-				   instructions.push_back("if "+ $1->addr + $2->x + $3->addr);
+				   instructions.push_back("if "+ $1->addr + $2->x + $3->addr + " ");
 				   instructions.push_back("");
 				   $$ = S;
 			   }
