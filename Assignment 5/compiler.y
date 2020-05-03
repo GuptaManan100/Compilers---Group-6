@@ -169,14 +169,14 @@ statement : ifStart M body {
 			}
 			| BREAK SEMI 
 			| CONTINUE SEMI 
-			| M WHILE M LRB exp_rel RRB M body {
+			| WHILE M LRB exp_rel RRB M body {
 				struct stmt *S = new struct stmt;
-				backpatch($8->nextlist,$3);
-				backpatch($5->truelist,$7);
-				S->nextlist = $5->falselist;
+				backpatch($7->nextlist,$2);
+				backpatch($4->truelist,$6);
+				S->nextlist = $4->falselist;
 				list <int> * temp  = makelist(instructions.size());
 				instructions.pb("");
-				backpatch(temp,$1);
+				backpatch(temp,$2);
 				$$ = S;
 			}
 			| switchStart switch_body 

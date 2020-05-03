@@ -8,11 +8,9 @@ int main() {
         x = 1;
         y = 10;
     }
-    y = 1;
-
-    x = 7;
     while (x < 7) {
         x = x - 1;
     }
+    x = 1;
     return 0;
 }
