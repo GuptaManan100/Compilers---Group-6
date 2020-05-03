@@ -26,4 +26,27 @@ struct expr {
     string tempaddr(int val = 0) { return addr = "__temp" + to_string(val); }
 };
 
+struct stmt{
+    list<int> *truelist,*falselist,*nextlist;
+
+    list<int> *mergelist(list<int> *a,list<int> *b){
+        list<int> *temp = new list<int>;
+        temp->merge(*a);
+        temp->merge(*b);
+        return temp;
+    }
+
+    list<int> *makelist(int i){
+        list<int> *temp = new list<int>;
+        temp->push_back(i);
+        return temp;
+    }
+
+    void backpatch(vector<string> &instructions,list<int> *a,string label){
+        for(auto x: *a){
+            instructions[x] += label;
+        }
+    }
+};
+
 #endif
