@@ -25,6 +25,7 @@
 	vector<string> instructions;
 	int intVarNum;
 	int floatVarNum;
+	int lblNum;
 
 	stack<int> breakInsts;
 	stack<int> continueInsts;
@@ -83,6 +84,31 @@
 		else floatTemps[k] = 0;
 	}
 
+	string getLabel(){
+		return "L" + to_string(lblNum++); 
+	}
+
+	list<int> *mergelist(list<int> *a,list<int> *b){
+        list<int> *temp = new list<int>;
+        temp->merge(*a);
+        temp->merge(*b);
+        return temp;
+    }
+
+    list<int> *makelist(int i){
+        list<int> *temp = new list<int>;
+        temp->push_back(i);
+        return temp;
+    }
+
+    void backpatch(list<int> *a,int i){
+		string label = getLabel();
+        for(auto x: *a){
+            instructions[x] += " goto " + label;
+        }
+		instructions[i] = label + ": " + instructions[i];
+    }
+
 	SymbolTable symTab;
 %}
 %code requires{
@@ -97,12 +123,14 @@
 	int num;
 	struct vecStr * v;
 	struct expr * E;
+	struct stmt * S;
 }
 
 %type<E> exp exp_sec exp_sim exp_term
-%type<s> ID op_high op_low INTNUM FLOATNUM LRB RRB
-%type<num> paramType paramList paramListNonEmpty
-%type<v> varNames 
+%type<s> ID op_high op_low INTNUM FLOATNUM LRB RRB relOp
+%type<num> paramType paramList paramListNonEmpty M
+%type<v> varNames
+%type<S> exp_rel exp_rel_and exp_rel_not exp_rel_term
 %%
 
 begin : declaration_list INT MAIN LRB RRB body 
@@ -150,7 +178,7 @@ case : CASE INTNUM COLON statements
 
 Default_case : DEFAULT COLON statements | 
 
-M : 
+M : {$$ = instructions.size();}
 
 N : 
 
@@ -200,15 +228,61 @@ varNames :	ID {
 				$$->addString($1->x);
 			}
 
-exp_rel : exp_rel OR M exp_rel_and | exp_rel_and
+exp_rel : exp_rel OR M exp_rel_and {
+				struct stmt *S = new struct stmt;
+				backpatch($1->falselist,$3);
+				S->truelist = mergelist($1->truelist,$4->truelist);
+				S->falselist = $4->falselist;
+				$$ = S;
+			} 
+		  | exp_rel_and { $$ = $1;}
 
-exp_rel_and : exp_rel_and AND M exp_rel_not | exp_rel_not
+exp_rel_and : exp_rel_and AND M exp_rel_not {
+				struct stmt *S = new struct stmt;
+				backpatch($1->truelist,$3);
+				S->truelist = $4->truelist;
+				S->falselist = mergelist($1->falselist,$4->falselist);
+				$$ = S;
+			  }
+			 | exp_rel_not {$$ = $1;}
 
-exp_rel_not : NOT exp_rel_term | exp_rel_term
+exp_rel_not : NOT exp_rel_term {
+				struct stmt *S = new struct stmt;
+				S->truelist = $2->falselist;
+				S->falselist = $2->truelist;
+				$$ = S;
+			  } 
+			  | exp_rel_term {$$ = $1;}
 
-exp_rel_term : LRB exp_rel RRB | exp relOp exp
+exp_rel_term : LRB exp_rel RRB { $$ = $2; } 
+			   | exp relOp exp {
+				   struct stmt *S = new struct stmt;
+				   int nextInstr = instructions.size();
+				   S->truelist = makelist( nextInstr );
+				   S->falselist = makelist( nextInstr+1 );
+				   instructions.push_back("if "+ $1->addr + $2->x + $3->addr);
+				   instructions.push_back("");
+				   $$ = S;
+			   }
 
-relOp : GT | LT | GTE | LTE | EQ | NEQ
+relOp : GT { struct str *newStr = new struct str(" > "); 
+			 $$ = newStr;
+		} 
+		| LT { struct str *newStr = new struct str(" < "); 
+			 $$ = newStr;
+		} 
+		| GTE { struct str *newStr = new struct str(" >= "); 
+			 $$ = newStr;
+		} 
+		| LTE { struct str *newStr = new struct str(" <= "); 
+			 $$ = newStr;
+		} 
+		| EQ { struct str *newStr = new struct str(" == "); 
+			 $$ = newStr;
+		} 
+		| NEQ { struct str *newStr = new struct str(" != "); 
+			 $$ = newStr;
+		}
 
 exp : ID EQUAL exp {
 			Variable * temp = symTab.findVariable($1->x);
@@ -362,6 +436,7 @@ int main()
 {
 	intVarNum = 0;
 	floatVarNum = 0;
+	lblNum = 0;
 	for(int i=0;i<FLOATREGS;i++)
 		floatTemps[i] = 0;
 	for(int i=0;i<INTREGS;i++)
