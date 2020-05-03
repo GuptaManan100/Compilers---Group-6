@@ -1,4 +1,6 @@
 #include <bits/stdc++.h>
+
+#include "additionalClasses.h"
 #ifndef UnionStructs_H
 #define UnionStructs_H
 using namespace std;
@@ -14,14 +16,10 @@ struct vecStr {
 };
 struct expr {
     string addr;
-    vector<string> code;
-    void addcode(expr *a) {
-        code.insert(code.end(), a->code.begin(), a->code.end());
-    }
-    void dbgcode() {
-        cerr << addr << endl;
-        for (auto it : code) cerr << it << endl;
-        cout << endl;
+    dataType type;
+    void setType(dataType a = _int, dataType b = _int) {
+        type = _int;
+        if (a == _float || b == _float) type = _float;
     }
     string tempaddr(int val = 0) { return addr = "__temp" + to_string(val); }
 };

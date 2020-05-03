@@ -11,7 +11,7 @@
 	extern int yylex();
 	void yyerror(string s)
 	{
-		cout<<"INVALID SYNTAX at line no "<<count_line<<"\n";
+		cout<<s<<endl<<"INVALID SYNTAX at line no "<<count_line<<"\n";
 		exit(1);
 	}
 	int yywrap()
@@ -23,7 +23,6 @@
 	int intTemps[INTREGS];
 
 	vector<string> instructions;
-	int curInstr;
 	int intVarNum;
 	int floatVarNum;
 
@@ -69,6 +68,20 @@
 		cout<<"Statement Too complex. Ran out of Int Temporary Variables at line "<<count_line<<"\n";
 		exit(1);
 	}
+	string getTempVariable(dataType type){
+		if(type==_float){
+			return "tf"+to_string(findFreeFloatVariable());
+		}
+
+		return "ti"+to_string(findFreeIntVariable());
+	}
+	
+	void freeTempVariable(string t){
+		if(t[0]!='t') return;
+		int k = stoi(t.substr(2));
+		if(t[1]=='i') intTemps[k]=0;
+		else floatTemps[k] = 0;
+	}
 
 	SymbolTable symTab;
 %}
@@ -88,11 +101,11 @@
 
 %type<E> exp exp_sec exp_sim exp_term
 %type<s> ID op_high op_low INTNUM FLOATNUM LRB RRB
-%type<num> paramType
-%type<v> varNames
+%type<num> paramType paramList paramListNonEmpty
+%type<v> varNames 
 %%
 
-begin : declaration_list INT MAIN LRB RRB body
+begin : declaration_list INT MAIN LRB RRB body 
 
 statements : statements M statement | 
 
@@ -103,7 +116,9 @@ statement : ifStart body |
 			whileStart body |
 			switchStart switch_body |
 			RETURN exp SEMI |
-			exp SEMI |
+			exp SEMI {
+				freeTempVariable($1->addr);
+			} |
 			var_dec|
 			forStart body |
 			PRINTF LRB ID RRB SEMI |
@@ -147,7 +162,8 @@ func_dec : func_head body
 
 func_head : func_id LRB parametersDec RRB
 
-func_id : paramType ID | VOID ID
+func_id : paramType ID
+		| VOID ID
 
 parametersDec : parametersDecNonEmpty | 
 
@@ -195,38 +211,55 @@ exp_rel_term : LRB exp_rel RRB | exp relOp exp
 relOp : GT | LT | GTE | LTE | EQ | NEQ
 
 exp : ID EQUAL exp {
-			struct expr *E = new struct expr;
-			E->addcode($3);
-			E->code.push_back($1->x + " = " + $3->addr);
-			$$ = E;
-			E->dbgcode();
+			Variable * temp = symTab.findVariable($1->x);
+			if(temp==NULL)
+			{
+				yyerror("Undefined Variable.");
+			}
+			if(temp->type!=$3->type){
+				string t = getTempVariable(temp->type);
+				instructions.pb(t+ " = "+$3->addr);
+				freeTempVariable($3->addr);
+				$3->addr = t;
+				// E->code.push_back(t+" = "+temp->name);
+				//symTab.upgradeVariable($1->x,_float,t);
+			}
+			instructions.push_back( temp->name+ " = " + $3->addr);
+			$$ = $3;
 		}
 	| exp_sim {
-			struct expr *E = new struct expr;
-			E->addr = $1->addr;
-			E->code = $1->code;
-			E->dbgcode();
-
-			$$ = E;
+			$$ = $1;
 		}
 
 exp_sim : exp_sim op_high exp_sec {
 			struct expr *E = new struct expr;
-			E->tempaddr(cttemp++);
-			E->addcode($1);
-			E->addcode($3);
-			E->code.push_back($1->addr+$2->x+$3->addr);
-			E->dbgcode();
+			E->setType($1->type,$3->type);
+			E->addr = getTempVariable(E->type);
 
+			string tc;
+			if($1->type!= E->type)
+			{
+				tc =  getTempVariable(E->type);
+				$1->type = E->type;
+				instructions.push_back(tc+" = "+$1->addr);
+				freeTempVariable($1->addr);
+				$1->addr = tc;
+			}
+			if($3->type!= E->type)
+			{
+				tc =  getTempVariable(E->type);
+				$3->type = E->type;
+				instructions.push_back(tc+" = "+$3->addr);
+				freeTempVariable($3->addr);
+				$3->addr = tc;
+			}
+			freeTempVariable($1->addr);
+			freeTempVariable($3->addr);
+			instructions.push_back(E->addr+" = "+$1->addr+$2->x+$3->addr);
 			$$ = E;
 		}
 		| exp_sec {
-			struct expr *E = new struct expr;
-			E->addr = $1->addr;
-			E->code = $1->code;
-			E->dbgcode();
-
-			$$ = E;
+			$$ = $1;
 		}
 
 op_high : ADD {$$ = new str(" + ");} 
@@ -238,54 +271,95 @@ op_low :  MUL {$$ = new str(" * ");}
 
 exp_sec : exp_sec op_low exp_term {
 			struct expr *E = new struct expr;
-			E->tempaddr(cttemp++);
-			E->addcode($1);
-			E->addcode($3);
-			E->code.push_back($1->addr+$2->x+$3->addr);
-			E->dbgcode();
+			E->setType($1->type,$3->type);
+			E->addr = getTempVariable(E->type);
+			string tc;
+			if($1->type!= E->type)
+			{
+				tc =  getTempVariable(E->type);
+				$1->type = E->type;
+				instructions.push_back(tc+" = "+$1->addr);
+				freeTempVariable($1->addr);
+				$1->addr = tc;
+			}
+			if($3->type!= E->type)
+			{
+				tc =  getTempVariable(E->type);
+				$3->type = E->type;
+				instructions.push_back(tc+" = "+$3->addr);
+				freeTempVariable($3->addr);
+				$3->addr = tc;
+			}
+
+			freeTempVariable($1->addr);
+			freeTempVariable($3->addr);
+			instructions.push_back(E->addr+" = "+$1->addr+$2->x+$3->addr);
+
 			$$ = E;
 		}
 		| exp_term{
-			struct expr *E = new struct expr;
-			E->addr = $1->addr;
-			E->code = $1->code;
-			$$ = E;
+			$$ = $1;
 		}
 
 exp_term : LRB exp RRB {
-				struct expr *E = new struct expr;
-				E->addr = $2->addr;
-				E->code = $2->code;
-				$$ = E;
+				$$ = $2;
 			}
 			| ID {			
 				struct expr *E = new struct expr;
-				E->addr = $1->x;
+				Variable * temp = symTab.findVariable($1->x);
+				if(temp==NULL)
+					yyerror("Undefined Variable.");
+				E->type = temp->type;
+				E->addr = getTempVariable(E->type);
+				instructions.push_back(E->addr + " = "+temp->name);
+							
 				$$ = E;
 			}
 			| INTNUM {			
 				struct expr *E = new struct expr;
-				E->addr = $1->x;
+				E->type = _int;
+				E->addr = getTempVariable(E->type);
+				instructions.push_back(E->addr + " = "+$1->x);
 				$$ = E;
 			}
 			| FLOATNUM {
 				struct expr *E = new struct expr;
-				E->addr = $1->x;
+				E->type = _float;
+				E->addr = getTempVariable(E->type);
+				instructions.push_back(E->addr + " = "+$1->x);
 				$$ = E;
 			}
 			| ID LRB paramList RRB {
-				;
+				Function *temp = symTab.findFunction($1->x);
+				if(!temp) yyerror("Function not defined");
+				struct expr *E = new struct expr;
+				E->type = temp->returnType;
+				if(!(E->type == _int || E->type ==_float))
+				{
+					yyerror("Invalid return type of arguement");
+				}
+				//TODO: Check Paramter Types.
+				E->addr = getTempVariable(temp->returnType);
+
+				instructions.push_back(E->addr+" = "+to_string($3));
+				$$=E;
 			}
 
-paramList : paramListNonEmpty | 
+paramList : paramListNonEmpty {$$ = $1;} | {$$=0;}
 
-paramListNonEmpty : exp COM paramListNonEmpty | exp
+paramListNonEmpty : exp COM paramListNonEmpty {
+						instructions.pb("param "+$1->addr);
+						$$ = $3+1;
+					}
+					| exp {
+						instructions.pb("param "+$1->addr);
+						$$=1;
+					}
 
 %%
 
 int main()
 {
-	curInstr = 0;
 	intVarNum = 0;
 	floatVarNum = 0;
 	for(int i=0;i<FLOATREGS;i++)
@@ -293,5 +367,11 @@ int main()
 	for(int i=0;i<INTREGS;i++)
 		intTemps[i] = 0;
 	yyparse();
+
+	for(auto c : instructions)
+	{
+		cout<<c<<endl;
+	}
+
 	//symTab.printVars();
 } 
