@@ -29,6 +29,7 @@
 
 	stack<int> breakInsts;
 	stack<int> continueInsts;
+	stack<string> switchExpr;
 
 	string genVarName(dataType dt)
 	{
@@ -116,6 +117,7 @@
             instructions[x] += "goto " + label;
         }
 		instructions[i] = label + ": " + instructions[i];
+
 	}
 
 	SymbolTable symTab;
@@ -135,11 +137,11 @@
 	struct stmt * S;
 }
 
-%type<E> exp exp_sec exp_sim exp_term
+%type<E> exp exp_sec exp_sim exp_term switchStart switch_body
 %type<s> ID op_high op_low INTNUM FLOATNUM LRB RRB relOp
-%type<num> paramType paramList paramListNonEmpty M
+%type<num> paramType paramList paramListNonEmpty M defaultBegin
 %type<v> varNames
-%type<S> exp_rel for_cond for_endLoop for_init exp_rel_and exp_rel_not exp_rel_term ifStart statement statements body N
+%type<S> exp_rel for_cond for_endLoop for_init exp_rel_and exp_rel_not exp_rel_term ifStart statement statements body N case case_list caseBegin Default_case 
 %%
 
 begin : declaration_list INT MAIN LRB RRB body 
@@ -159,14 +161,16 @@ statement : ifStart M body {
 				backpatch($1->truelist,$2);
 				S->nextlist = mergelist($1->falselist,$3->nextlist);
 				$$ = S;
+				symTab.reduceLevel();
 			}
-			| ifStart M body N ELSE M body {
+			| ifStart M body N elseStart M body {
 				struct stmt *S = new struct stmt;
 				backpatch($1->truelist,$2);
 				backpatch($1->falselist,$6);
 				S->nextlist = mergelist($3->nextlist,$4->nextlist);
 				S->nextlist = mergelist(S->nextlist,$7->nextlist);
 				$$ = S;
+				symTab.reduceLevel();
 			}
 			| BREAK SEMI 
 			| CONTINUE SEMI 
@@ -175,12 +179,17 @@ statement : ifStart M body {
 				backpatch($7->nextlist,$2);
 				backpatch($4->truelist,$6);
 				S->nextlist = $4->falselist;
-				// list <int> * temp  = makelist(instructions.size());
-				// instructions.pb("");
 				backpatch($8->nextlist,$2);
 				$$ = S;
 			}
-			| switchStart switch_body 
+			| switchStart switch_body {
+				symTab.reduceLevel();
+				freeTempVariable(switchExpr.top());
+				switchExpr.pop();
+				struct stmt *S = new struct stmt;
+				S->nextlist = NULL;
+				$$ = S;
+			}
 			| RETURN exp SEMI 
 			| exp SEMI {
 				freeTempVariable($1->addr);
@@ -192,8 +201,6 @@ statement : ifStart M body {
 				struct stmt *S = new struct stmt;
 				S->nextlist = NULL;
 				$$ = S;
-				cout<<"we are here"<<endl;
-
 			}
 			| FOR LRB for_init M for_cond M for_endLoop N RRB M body N{
 				struct stmt *S = new struct stmt;
@@ -207,11 +214,20 @@ statement : ifStart M body {
 			| PRINTF LRB ID RRB SEMI 
 			| LevelInc body
 
-ifStart : IF LRB exp_rel RRB {$$ = $3;}
+ifStart : IF LRB exp_rel RRB {$$ = $3; symTab.addLevel(); }
+
+elseStart : ELSE {symTab.reduceLevel(); symTab.addLevel(); }
 
 LevelInc :
 
-switchStart: SWITCH LRB exp RRB
+switchStart: SWITCH LRB exp RRB { $$ = $3;
+								  if($3->type != _int){
+									  cout<<"Incompatible type for SWITCH expression. Integer expected at "<<count_line<<endl;
+									  exit(1);
+								  }
+								  symTab.addLevel();
+								  switchExpr.push($3->addr);
+								}
 
 body : LCB statements RCB {$$ = $2;}
 
@@ -231,13 +247,61 @@ for_endLoop : exp {
 				$$ = S;
 			}
 
-switch_body : LCB case_list Default_case RCB
+switch_body : LCB case_list Default_case RCB {
+				 backpatch($2->truelist,$3->start);
+				 int nextInstr = instructions.size();
+				 instructions.push_back("");
+				 backpatch($2->nextlist,nextInstr);
+			  }
 
-case_list : case case_list | case
+case_list : case case_list {
+				struct stmt *S = new struct stmt;
+				backpatch($1->truelist,$2->start);
+				S->truelist = $2->truelist;
+				S->nextlist = mergelist($1->nextlist,$2->nextlist);
+				S->start = $1->start;
+				$$ = S;
+			}
+		    | case {$$ = $1;}
 
-case : CASE INTNUM COLON statements
+case : caseBegin statements {
+		struct stmt *S = new struct stmt;
+		int nextInstr = instructions.size();
+		instructions.push_back("");
+		S->truelist = $1->truelist;
+		S->nextlist = makelist(nextInstr);
+		S->start = $1->start;
+		$$ = S;
+	 }
 
-Default_case : DEFAULT COLON statements | 
+caseBegin : CASE INTNUM COLON {
+			struct stmt *S = new struct stmt;
+			S->start = instructions.size();
+			string var = getTempVariable(_int);
+			instructions.push_back(var + " = " + $2->x);
+			S->truelist = makelist(instructions.size());
+			instructions.push_back("if " + switchExpr.top() + " != " + var + " ");
+			freeTempVariable(var);
+			$$ = S;
+		  }
+
+Default_case : defaultBegin statements {
+				 struct stmt *S = new struct stmt;
+				 S->truelist = NULL;
+				 S->nextlist = NULL;
+				 S->start = $1;
+				 $$ = S;
+			   }
+			   | { 
+				 struct stmt *S = new struct stmt;
+				 S->truelist = NULL;
+				 S->nextlist = NULL;
+				 S->start = instructions.size();
+				 instructions.push_back("");
+				 $$ = S; 
+				}
+
+defaultBegin : DEFAULT COLON {  $$ = instructions.size(); instructions.push_back(""); } 
 
 M : {$$ = instructions.size();}
 

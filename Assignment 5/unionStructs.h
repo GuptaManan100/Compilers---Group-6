@@ -26,6 +26,7 @@ struct expr {
 
 struct stmt{
     list<int> *truelist,*falselist,*nextlist;
+    int start;
 };
 
 #endif

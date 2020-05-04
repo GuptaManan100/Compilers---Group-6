@@ -51,8 +51,8 @@ class SymbolTable {
 
     Variable *findVariable(string s) {
         for (int i = level; i >= 0; i--) {
-            if (vars[level].find(s) != vars[level].end()) {
-                return vars[level][s];
+            if (vars[i].find(s) != vars[i].end()) {
+                return vars[i][s];
             }
         }
         return NULL;
