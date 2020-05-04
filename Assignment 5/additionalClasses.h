@@ -24,7 +24,7 @@ class Function {
    public:
     string name;
     dataType returnType;
-    vector<Variable> params;
+    vector<dataType> params;
 
     Function(dataType ret, string s) {
         name = s;
@@ -32,15 +32,7 @@ class Function {
         params.clear();
     }
 
-    void addParameter(Variable x) { params.pb(x); }
-
-    Variable findParameter(string s) {
-        for (auto x : params) {
-            if (x.name == s) return x;
-        }
-        Variable toret(_error, "a");
-        return toret;
-    }
+    void addParameter(dataType x) { params.pb(x); }
 };
 
 class SymbolTable {

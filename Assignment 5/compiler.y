@@ -26,10 +26,16 @@
 	vector<string> instructions;
 	int intVarNum;
 	int floatVarNum;
+	int funcNum;
 	int lblNum;
 
 	vector<vector <int>> breakInsts, contInsts;
 	stack<string> switchExpr;
+
+	string getFuncName()
+	{
+		return "func" + to_string(funcNum++);
+	}
 
 	string genVarName(dataType dt)
 	{
@@ -71,6 +77,10 @@
 		exit(1);
 	}
 	string getTempVariable(dataType type){
+		if(type==_void)
+		{
+			return "nottouse";
+		}
 		if(type==_float){
 			return "tf"+to_string(findFreeFloatVariable());
 		}
@@ -116,8 +126,10 @@
         for(auto x: *a){
             instructions[x] += "goto " + label;
         }
+		while(instructions.size()<=i){
+			instructions.push_back("");
+		}
 		instructions[i] = label + ": " + instructions[i];
-
 	}
 
 	SymbolTable symTab;
@@ -135,16 +147,22 @@
 	struct vecStr * v;
 	struct expr * E;
 	struct stmt * S;
+	struct Params * p;
 }
 
 %type<E> exp exp_sec exp_sim exp_term switchStart switch_body
 %type<s> ID op_high op_low INTNUM FLOATNUM LRB RRB relOp
-%type<num> paramType paramList paramListNonEmpty M defaultBegin
+%type<num> paramType M defaultBegin
 %type<v> varNames
 %type<S> exp_rel for_cond for_endLoop for_init exp_rel_and exp_rel_not exp_rel_term ifStart statement statements body N case case_list caseBegin Default_case 
+%type<p> parametersDecNonEmpty paramDec parametersDec func_id paramList paramListNonEmpty
 %%
 
-begin : declaration_list INT MAIN LRB RRB body 
+begin : declaration_list INT MAIN LRB RRB body {
+				int intCoun = instructions.size();
+				instructions.push_back("HLT");
+				backpatch($6->nextlist,intCoun);
+			}
 
 statements : statements M statement {
 				backpatch($1->nextlist,$2);
@@ -207,7 +225,17 @@ statement : ifStart M body {
 				S->nextlist = NULL;
 				$$ = S;
 			}
-			| RETURN exp SEMI 
+			| RETURN exp SEMI {
+				if($2->type==_void)
+				{
+					yyerror("Invalid Use of Void Return Type");
+				}
+				instructions.push_back("return "+ $2->addr);
+				freeTempVariable($2->addr);
+				struct stmt *S = new struct stmt;
+				S->nextlist = NULL;
+				$$ = S;
+			}
 			| exp SEMI {
 				freeTempVariable($1->addr);
 				struct stmt *S = new struct stmt;
@@ -234,16 +262,25 @@ statement : ifStart M body {
 				symTab.reduceLevel();
 
 			}
-			| PRINTF LRB ID RRB SEMI 
-			| LevelInc body
+			| PRINTF LRB ID RRB SEMI {
+				Variable * temp = symTab.findVariable($3->x);
+				if(temp==NULL)
+					yyerror("Undefined Variable.");
+				instructions.push_back("printf( " + temp->name + " )" );
+				struct stmt *S = new struct stmt;
+				S->nextlist = NULL;
+				$$ = S;
+			}
 
 ifStart : IF LRB exp_rel RRB {$$ = $3; symTab.addLevel(); }
 
 elseStart : ELSE {symTab.reduceLevel(); symTab.addLevel(); }
 
-LevelInc :
-
 switchStart: SWITCH LRB exp RRB { $$ = $3;
+									if($3->type==_void)
+									{
+										yyerror("Invalid Use of Void Return Type");
+									}
 								  if($3->type != _int){
 									  cout<<"Incompatible type for SWITCH expression. Integer expected at "<<count_line<<endl;
 									  exit(1);
@@ -352,18 +389,78 @@ declaration_list : declaration_list declaration |
 
 declaration : var_dec | func_dec
 
-func_dec : func_head body
+func_dec : func_head body {
+				symTab.reduceLevel();
+				int intCoun = instructions.size();
+				instructions.push_back("func end");
+				backpatch($2->nextlist,intCoun);
+			}
 
-func_head : func_id LRB parametersDec RRB
+func_head : func_id LRB parametersDec RRB{
+				symTab.addLevel();
+				string newFun = getFuncName();
+				if(symTab.addFunction($1->nm[0],$1->dt[0],newFun)==1)
+					yyerror("Function Name Already In Use");
+				Function * fctn = symTab.findFunction($1->nm[0]);
+				for(auto cx : $3->dt)
+				{
+					fctn->addParameter(cx);
+				}
 
-func_id : paramType ID
-		| VOID ID
+				for(int i=0;i<($3->dt).size();i++)
+				{
+					if(symTab.addVariable(($3->nm)[i],($3->dt)[i],genVarName(($3->dt)[i]))==1)
+					{
+						yyerror("Parameter Redclaration");
+					}
+				}
 
-parametersDec : parametersDecNonEmpty | 
+				instructions.push_back("func begin " + newFun);
 
-parametersDecNonEmpty : paramDec | paramDec COM parametersDecNonEmpty
+			}
 
-paramDec : paramType ID
+func_id : paramType ID {
+				struct Params * ps = new struct Params;
+				ps->nm.push_back($2->x);
+				if($1==0)
+				{
+					ps->dt.push_back(_int);
+				}
+				else
+					ps->dt.push_back(_float);
+				$$ = ps;
+			}
+			| VOID ID{
+				struct Params * ps = new struct Params;
+				ps->nm.push_back($2->x);
+				ps->dt.push_back(_void);
+				$$ = ps;
+			}
+
+parametersDec : parametersDecNonEmpty {$$ = $1; } | {
+				struct Params * ps = new struct Params;
+				$$ = ps;
+			}
+
+parametersDecNonEmpty : paramDec {$$ = $1;} | paramDec COM parametersDecNonEmpty {
+				$$ = $1;
+				for(auto cx : $3->nm)
+					$$->nm.push_back(cx);
+				for(auto cx : $3->dt)
+					$$->dt.push_back(cx);
+			}
+
+paramDec : paramType ID {
+				struct Params * ps = new struct Params;
+				ps->nm.push_back($2->x);
+				if($1==0)
+				{
+					ps->dt.push_back(_int);
+				}
+				else
+					ps->dt.push_back(_float);
+				$$ = ps;
+			}
 
 paramType : INT {$$ = 0;}
 			| FLOAT {$$ = 1;}
@@ -382,7 +479,7 @@ var_dec : paramType varNames SEMI{
 						exit(1);
 					}
 				}
-				instructions.pb(" ");
+				instructions.pb("");
 			}
 
 varNames :	ID {
@@ -423,6 +520,10 @@ exp_rel_not : NOT exp_rel_term {
 
 exp_rel_term : LRB exp_rel RRB { $$ = $2; } 
 			   | exp relOp exp {
+				   if($1->type==_void || $3->type==_void)
+				   {
+						yyerror("Invalid Use of Void Return Type");
+				   }
 				   struct stmt *S = new struct stmt;
 				   int nextInstr = instructions.size();
 				   S->truelist = makelist( nextInstr );
@@ -454,6 +555,10 @@ relOp : GT { struct str *newStr = new struct str(" > ");
 		}
 
 exp : ID EQUAL exp {
+			if($3->type==_void)
+			{
+				yyerror("Invalid Use of Void Return Type");
+			}
 			Variable * temp = symTab.findVariable($1->x);
 			if(temp==NULL)
 			{
@@ -476,6 +581,10 @@ exp : ID EQUAL exp {
 
 exp_sim : exp_sim op_high exp_sec {
 			struct expr *E = new struct expr;
+			if($1->type==_void || $3->type==_void)
+			{
+				yyerror("Invalid Use of Void Return Type");
+			}
 			E->setType($1->type,$3->type);
 			E->addr = getTempVariable(E->type);
 
@@ -514,6 +623,10 @@ op_low :  MUL {$$ = new str(" * ");}
 
 exp_sec : exp_sec op_low exp_term {
 			struct expr *E = new struct expr;
+			if($1->type==_void || $3->type==_void)
+			{
+				yyerror("Invalid Use of Void Return Type");
+			}
 			E->setType($1->type,$3->type);
 			E->addr = getTempVariable(E->type);
 			string tc;
@@ -577,32 +690,72 @@ exp_term : LRB exp RRB {
 				if(!temp) yyerror("Function not defined");
 				struct expr *E = new struct expr;
 				E->type = temp->returnType;
-				if(!(E->type == _int || E->type ==_float))
-				{
-					yyerror("Invalid return type of arguement");
-				}
-				//TODO: Check Paramter Types.
 				E->addr = getTempVariable(temp->returnType);
-
-				instructions.push_back(E->addr+" = "+to_string($3));
+				
+				int parCount = temp->params.size();
+				int passed = $3->nm.size();
+				if(passed!=parCount)
+				{
+					yyerror("Incorrect Number of Arguements");
+				}
+				string tc;
+				for(int i=0;i<parCount;i++)
+				{
+					if(temp->params[i] != $3->dt[i])
+					{
+						tc =  getTempVariable(temp->params[i]);
+						instructions.push_back(tc+" = "+$3->nm[i]);
+						freeTempVariable($3->nm[i]);
+						$3->nm[i] = tc;
+					}
+					instructions.push_back("param "+$3->nm[i]);
+					freeTempVariable($3->nm[i]);
+				}
+				tc = "";
+				if(E->type != _void)
+				{
+					tc = E->addr + " = ";
+				}
+				tc = tc + "call " + temp->name + ", " + to_string(parCount);
+				instructions.push_back(tc);
 				$$=E;
 			}
 
-paramList : paramListNonEmpty {$$ = $1;} | {$$=0;}
+paramList : paramListNonEmpty {$$ = $1;} | {
+						struct Params * ps = new struct Params;
+						$$ = ps;
+					}
 
 paramListNonEmpty : exp COM paramListNonEmpty {
-						instructions.pb("param "+$1->addr);
-						$$ = $3+1;
+						if($1->type==_void)
+						{
+							yyerror("Invalid Use of Void Return Type");
+						}
+						struct Params * ps = new struct Params;
+						ps->nm.push_back($1->addr);
+						ps->dt.push_back($1->type);
+						for(auto cx : $3->nm)
+							$$->nm.push_back(cx);
+						for(auto cx : $3->dt)
+							$$->dt.push_back(cx);
+						$$ = ps;
 					}
 					| exp {
-						instructions.pb("param "+$1->addr);
-						$$=1;
+						if($1->type==_void)
+						{
+							yyerror("Invalid Use of Void Return Type");
+						}
+						struct Params * ps = new struct Params;
+						ps->nm.push_back($1->addr);
+						ps->dt.push_back($1->type);
+						$$ = ps;
 					}
 
 %%
 
 int main()
 {
+	funcNum = 0;
 	intVarNum = 0;
 	floatVarNum = 0;
 	lblNum = 0;
@@ -615,6 +768,8 @@ int main()
 
 	for(auto c : instructions)
 	{
+		if(c=="")
+			continue;
 		cout<<c<<endl;
 	}
 

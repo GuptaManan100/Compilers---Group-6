@@ -1,6 +1,7 @@
-int simpletest(int a) {
+void simpletest() {
     int x;
     x = 1;
+    printf(x);
 }
 int fibonacci(int x) {
     if (x == 1 || x == 0) {
@@ -13,17 +14,6 @@ int fibonacci(int x) {
 
 int main() {
     int a;
-    a = simpletest(a);
+    simpletest();
     a = fibonacci(5);
 }
-
-// int fibonacci(int x)
-// {
-// 	if(x==1 || x==0)
-// 	{
-// 		return 1;
-// 	}
-// 	int ans;
-// 	ans = fibonacci(x-1) + fibonacci(x-2);
-// 	return ans;
-// }

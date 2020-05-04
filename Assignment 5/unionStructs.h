@@ -29,4 +29,9 @@ struct stmt{
     int start;
 };
 
+struct Params{
+    vector<dataType> dt;
+    vector<string> nm;
+};
+
 #endif

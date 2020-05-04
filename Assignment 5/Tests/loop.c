@@ -27,5 +27,7 @@ int main() {
         x = x + 1;
     }
 
+    printf(x);
+
     return 0;
 }
