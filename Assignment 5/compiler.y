@@ -196,6 +196,8 @@ statement : ifStart M body {
 				lc--;
 				breakInsts.pop_back();
 				contInsts.pop_back();
+				symTab.reduceLevel();
+
 			}
 			| switchStart switch_body {
 				symTab.reduceLevel();
@@ -229,6 +231,8 @@ statement : ifStart M body {
 				lc--;
 				breakInsts.pop_back();
 				contInsts.pop_back();
+				symTab.reduceLevel();
+
 			}
 			| PRINTF LRB ID RRB SEMI 
 			| LevelInc body
@@ -251,11 +255,13 @@ switchStart: SWITCH LRB exp RRB { $$ = $3;
 body : LCB statements RCB {$$ = $2;}
 
 forStart : FOR {
+				symTab.addLevel();
 				lc++;
 				breakInsts.pb({});
 				contInsts.pb({});
 			}
 whileStart : WHILE {
+				symTab.addLevel();
 				lc++;
 				breakInsts.pb({});
 				contInsts.pb({});
