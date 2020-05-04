@@ -50,6 +50,19 @@
 		return ans;
 	}
 
+	string genParameterName(dataType dt, int num)
+	{
+		string ans;
+		if(dt==_float)
+		{
+			ans = "pf" + to_string(num);
+		}
+		else{
+			ans = "pi" + to_string(num);
+		}
+		return ans;
+	}
+
 	int findFreeFloatVariable()
 	{
 		for(int i=0;i<FLOATREGS;i++)
@@ -158,10 +171,15 @@
 %type<p> parametersDecNonEmpty paramDec parametersDec func_id paramList paramListNonEmpty
 %%
 
-begin : declaration_list INT MAIN LRB RRB body {
+begin : declaration_list INT main LRB RRB body {
 				int intCoun = instructions.size();
 				instructions.push_back("HLT");
 				backpatch($6->nextlist,intCoun);
+				symTab.reduceLevel();
+			}
+
+main 	: MAIN{
+				symTab.addLevel();
 			}
 
 statements : statements M statement {
@@ -409,7 +427,7 @@ func_head : func_id LRB parametersDec RRB{
 
 				for(int i=0;i<($3->dt).size();i++)
 				{
-					if(symTab.addVariable(($3->nm)[i],($3->dt)[i],genVarName(($3->dt)[i]))==1)
+					if(symTab.addVariable(($3->nm)[i],($3->dt)[i],genParameterName(($3->dt)[i],i+1))==1)
 					{
 						yyerror("Parameter Redclaration");
 					}

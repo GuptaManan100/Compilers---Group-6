@@ -1,5 +1,5 @@
-void simpletest() {
-    int x;
+void simpletest(int x) {
+    int y;
     x = 1;
     printf(x);
 }
@@ -14,6 +14,6 @@ int fibonacci(int x) {
 
 int main() {
     int a;
-    simpletest();
+    simpletest(a);
     a = fibonacci(5);
 }
