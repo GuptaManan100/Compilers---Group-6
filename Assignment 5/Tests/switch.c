@@ -5,7 +5,7 @@ int main()
 	int y;
 	y = 1;
 
-	switch(x)
+	switch(x+y)
 	{
 		case 0:
 			y = 2;
@@ -18,7 +18,5 @@ int main()
 			y = 1;
 	}
 
-	printf(y);
-
-	return 0;
+	x = 1;
 }
