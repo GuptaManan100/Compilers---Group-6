@@ -6,17 +6,21 @@ int main() {
 
     for (i = 1; i <= x; i = i + 1) {
         y = 9 - 1.0;
-        while (y >= 0) {
-            y = y - 1.0;
+        for (y = 0; y < 9; y = y + 1) {
+            if (x == 4) {
+                break;
+            }
         }
     }
-    int a, b;
-    float c;
-    c = 1.0;
-    a = 5;
-    b = 4;
-    a = 1 + 1;
-    a = a * (b + 8 - 5) + b * (a + b) / (c + a);
+
+    int c;
+    c = 0;
+    for (c = 0; c < 5; c = c + 1) {
+        if (x == 4) {
+            continue;
+        }
+        x = x + 1;
+    }
 
     return 0;
 }

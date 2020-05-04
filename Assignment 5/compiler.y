@@ -9,7 +9,7 @@
 	int count_line = 1;
 	int cttemp=0;
 	extern int yylex();
-	void yyerror(string s)
+	void yyerror(string s="")
 	{
 		cout<<s<<endl<<"INVALID SYNTAX at line no "<<count_line<<"\n";
 		exit(1);
@@ -21,14 +21,14 @@
 
 	int floatTemps[FLOATREGS];
 	int intTemps[INTREGS];
+	int lc;
 
 	vector<string> instructions;
 	int intVarNum;
 	int floatVarNum;
 	int lblNum;
 
-	stack<int> breakInsts;
-	stack<int> continueInsts;
+	vector<vector <int>> breakInsts, contInsts;
 
 	string genVarName(dataType dt)
 	{
@@ -145,7 +145,6 @@
 begin : declaration_list INT MAIN LRB RRB body 
 
 statements : statements M statement {
-				instructions.pb(" ");
 				backpatch($1->nextlist,$2);
 				$$ = $3;
 			 }
@@ -168,17 +167,31 @@ statement : ifStart M body {
 				S->nextlist = mergelist(S->nextlist,$7->nextlist);
 				$$ = S;
 			}
-			| BREAK SEMI 
-			| CONTINUE SEMI 
-			| WHILE M LRB exp_rel RRB M body N{
+			| BREAK SEMI {
+				if(lc==-1) yyerror();
+				breakInsts[lc].pb(instructions.size());
+				instructions.pb("");
+				$$ = new struct stmt;
+				$$->nextlist = NULL;
+			}
+			| CONTINUE SEMI {
+				if(lc==-1) yyerror();
+				contInsts[lc].pb(instructions.size());
+				instructions.pb("");
+				$$ = new struct stmt;
+				$$->nextlist = NULL;
+			}
+			| whileStart M LRB exp_rel RRB M body N{
 				struct stmt *S = new struct stmt;
-				backpatch($7->nextlist,$2);
 				backpatch($4->truelist,$6);
+				for(auto it: breakInsts[lc]) $4->falselist->pb(it);
+				for(auto it: contInsts[lc]) $8->nextlist->pb(it);
 				S->nextlist = $4->falselist;
-				// list <int> * temp  = makelist(instructions.size());
-				// instructions.pb("");
-				backpatch($8->nextlist,$2);
+				backpatch(mergelist($8->nextlist,$7->nextlist),$2);
 				$$ = S;
+				lc--;
+				breakInsts.pop_back();
+				contInsts.pop_back();
 			}
 			| switchStart switch_body 
 			| RETURN exp SEMI 
@@ -195,14 +208,18 @@ statement : ifStart M body {
 				cout<<"we are here"<<endl;
 
 			}
-			| FOR LRB for_init M for_cond M for_endLoop N RRB M body N{
+			| forStart LRB for_init M for_cond M for_endLoop N RRB M body N{
 				struct stmt *S = new struct stmt;
-				backpatch($11->nextlist,$4);
 				backpatch($5->truelist,$10);
+				for(auto it: breakInsts[lc]) $5->falselist->pb(it);
+				for(auto it: contInsts[lc]) $12->nextlist->pb(it);
 				S->nextlist = $5->falselist;
-				backpatch($12->nextlist,$6);
+				backpatch(mergelist($12->nextlist,$11->nextlist),$6);
 				backpatch($8->nextlist,$4);
 				$$ = S;
+				lc--;
+				breakInsts.pop_back();
+				contInsts.pop_back();
 			}
 			| PRINTF LRB ID RRB SEMI 
 			| LevelInc body
@@ -214,6 +231,17 @@ LevelInc :
 switchStart: SWITCH LRB exp RRB
 
 body : LCB statements RCB {$$ = $2;}
+
+forStart : FOR {
+				lc++;
+				breakInsts.pb({});
+				contInsts.pb({});
+			}
+whileStart : WHILE {
+				lc++;
+				breakInsts.pb({});
+				contInsts.pb({});
+			}
 
 for_init : exp SEMI{
 				freeTempVariable($1->addr);
@@ -282,7 +310,7 @@ var_dec : paramType varNames SEMI{
 						exit(1);
 					}
 				}
-
+				instructions.pb(" ");
 			}
 
 varNames :	ID {
@@ -340,10 +368,10 @@ relOp : GT { struct str *newStr = new struct str(" > ");
 		| LT { struct str *newStr = new struct str(" < "); 
 			 $$ = newStr;
 		} 
-		| GTE { struct str *newStr = new struct str(" >= "); 
+		| GTE { struct str *newStr = new struct str(" <= "); 
 			 $$ = newStr;
 		} 
-		| LTE { struct str *newStr = new struct str(" <= "); 
+		| LTE { struct str *newStr = new struct str(" >= "); 
 			 $$ = newStr;
 		} 
 		| EQ { struct str *newStr = new struct str(" == "); 
@@ -506,6 +534,7 @@ int main()
 	intVarNum = 0;
 	floatVarNum = 0;
 	lblNum = 0;
+	lc=-1;
 	for(int i=0;i<FLOATREGS;i++)
 		floatTemps[i] = 0;
 	for(int i=0;i<INTREGS;i++)
