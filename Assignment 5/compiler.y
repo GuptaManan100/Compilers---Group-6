@@ -173,7 +173,7 @@
 
 begin : declaration_list INT main LRB RRB body {
 				int intCoun = instructions.size();
-				instructions.push_back("HLT");
+				instructions.push_back("");
 				backpatch($6->nextlist,intCoun);
 				symTab.reduceLevel();
 			}
@@ -753,9 +753,9 @@ paramListNonEmpty : exp COM paramListNonEmpty {
 						ps->nm.push_back($1->addr);
 						ps->dt.push_back($1->type);
 						for(auto cx : $3->nm)
-							$$->nm.push_back(cx);
+							ps->nm.push_back(cx);
 						for(auto cx : $3->dt)
-							$$->dt.push_back(cx);
+							ps->dt.push_back(cx);
 						$$ = ps;
 					}
 					| exp {

@@ -12,7 +12,8 @@ int main(){
     y = y/4;
     
     switch(x+2*y){
-        case 12: int x = 3;
+        case 12: int x;
+                 x = 3;
                  y = 4;
         default:
     }
