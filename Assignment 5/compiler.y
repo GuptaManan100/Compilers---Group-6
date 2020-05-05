@@ -173,12 +173,13 @@
 
 begin : declaration_list INT main LRB RRB body {
 				int intCoun = instructions.size();
-				instructions.push_back("");
+				instructions.push_back("func end");
 				backpatch($6->nextlist,intCoun);
 				symTab.reduceLevel();
 			}
 
 main 	: MAIN{
+				instructions.push_back("func begin main");
 				symTab.addLevel();
 			}
 
