@@ -1,0 +1,42 @@
+func begin func0
+ti0 = 1
+pi1 = ti0
+printf( pi1 )
+func end
+func begin func1
+ti0 = pi1
+ti1 = 1
+if ti0 == ti1 goto L1
+goto L0
+L0: ti0 = pi1
+ti1 = 0
+if ti0 == ti1 goto L1
+goto L2
+L1: ti0 = 1
+return ti0
+L2: 
+ti0 = pi1
+ti1 = 1
+ti2 = ti0 - ti1
+param ti2
+ti0 = call func1, 1
+ti1 = pi1
+ti2 = 2
+ti3 = ti1 - ti2
+param ti3
+ti1 = call func1, 1
+ti2 = ti0 + ti1
+i1 = ti2
+ti0 = i1
+return ti0
+func end
+func begin main
+ti0 = i2
+param ti0
+call func0, 1
+ti0 = 5
+param ti0
+ti1 = call func1, 1
+i2 = ti1
+printf( i2 )
+func end

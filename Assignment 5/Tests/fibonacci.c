@@ -16,4 +16,5 @@ int main() {
     int a;
     simpletest(a);
     a = fibonacci(5);
+    printf(a);
 }
