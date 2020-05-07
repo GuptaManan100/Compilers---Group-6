@@ -9,9 +9,6 @@ then
 	filename=`echo "$1" | cut -f 1 -d '.'`
 	extension=`echo "$1" | cut -f 2 -d '.'`
 
-	ext="_intermediateCode.txt"
-	newfilename=${filename}${ext}
-
 	if [ ! $extension == "c" ]
 	then
 		echo "Please provide a C file only."
@@ -21,14 +18,24 @@ then
 	bison -d compiler.y
 	flex compiler.l
 	g++ -ggdb lex.yy.c compiler.tab.c -ll
-	./a.out < $1
+	./a.out < $1 > intermediate.txt
 
 	if [ $? -eq 1 ]; then
+		cat intermediate.txt
+		rm intermediate.txt
 	    echo "Compiler gives syntax error"
+		rm lex.yy.c
+		rm compiler.tab.*
+		rm a.out
+	    exit 1
 	fi
 
 	rm lex.yy.c
 	rm compiler.tab.*
+	rm a.out
+
+	g++ ./Second\ Pass/new.cpp
+	./a.out
 	rm a.out
 else
 	echo "Provide the input file only"
